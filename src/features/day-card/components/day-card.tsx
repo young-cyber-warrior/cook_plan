@@ -19,12 +19,11 @@ interface DayCardProps {
   day: Day;
   /** Meal list and footer, revealed by the accordion. */
   children?: ReactNode;
-  defaultExpanded?: boolean;
 }
 
-/** Tapping anywhere on the card toggles the accordion. */
-export function DayCard({ day, children, defaultExpanded = false }: DayCardProps) {
-  const { toggle, onContentLayout, containerStyle } = useCollapsible(defaultExpanded);
+/** Tapping anywhere on the card toggles the accordion; cards always start collapsed. */
+export function DayCard({ day, children }: DayCardProps) {
+  const { toggle, onContentLayout, containerStyle } = useCollapsible(false);
 
   return (
     /* Shadow lives on the outer view: clipping it together with `overflow` drops it on iOS. */

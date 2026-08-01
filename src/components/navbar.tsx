@@ -4,8 +4,10 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { RecipesNavbarContent } from '@/features/recipes/components/recipes-navbar-content';
+import { DaysNavbarContent } from '@/features/weeks/components/days-navbar-content';
 
 const CONTENT_BY_PATH: Record<string, ComponentType> = {
+  '/': DaysNavbarContent,
   '/recipes': RecipesNavbarContent,
 };
 

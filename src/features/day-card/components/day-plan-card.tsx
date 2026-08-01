@@ -9,11 +9,10 @@ import type { Day, Meal } from '@/features/day-card/types';
 
 interface DayPlanCardProps {
   day: Day;
-  defaultExpanded?: boolean;
 }
 
 /** Owns the state of a single day, so a week is just a list of these. */
-export function DayPlanCard({ day: initialDay, defaultExpanded }: DayPlanCardProps) {
+export function DayPlanCard({ day: initialDay }: DayPlanCardProps) {
   const { day, setServings, attachRecipe, renameMeal, removeMeal, addMeal } =
     useDayPlan(initialDay);
 
@@ -31,7 +30,7 @@ export function DayPlanCard({ day: initialDay, defaultExpanded }: DayPlanCardPro
   const onAddMeal = useCallback(() => addMeal('Перекус', 'snack'), [addMeal]);
 
   return (
-    <DayCard day={day} defaultExpanded={defaultExpanded}>
+    <DayCard day={day}>
       <MealList
         meals={day.meals}
         onServingsChange={setServings}

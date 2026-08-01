@@ -22,6 +22,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.0",
+    "react-native-calendars": "^1.1314.0",
     "react-native-edge-to-edge": "^1.8.1",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-nitro-modules": "^0.36.1",
@@ -35,6 +36,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.1",
     "typescript": "~6.0.3"
   },
   "scripts": {

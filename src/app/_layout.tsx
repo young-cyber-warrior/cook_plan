@@ -4,15 +4,18 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { Navbar } from '@/components/navbar';
 import { AddRecipeProvider } from '@/features/recipes/context/add-recipe-context';
+import { WeeksProvider } from '@/features/weeks/context/weeks-context';
 
 export default function RootLayout() {
   return (
-    <AddRecipeProvider>
-      <View style={styles.root}>
-        <Navbar />
-        <Stack screenOptions={{ headerShown: false, contentStyle: styles.content }} />
-      </View>
-    </AddRecipeProvider>
+    <WeeksProvider>
+      <AddRecipeProvider>
+        <View style={styles.root}>
+          <Navbar />
+          <Stack screenOptions={{ headerShown: false, contentStyle: styles.content }} />
+        </View>
+      </AddRecipeProvider>
+    </WeeksProvider>
   );
 }
 
