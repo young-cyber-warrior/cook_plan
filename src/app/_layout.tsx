@@ -3,13 +3,16 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { Navbar } from '@/components/navbar';
+import { AddRecipeProvider } from '@/features/recipes/context/add-recipe-context';
 
 export default function RootLayout() {
   return (
-    <View style={styles.root}>
-      <Navbar />
-      <Stack screenOptions={{ headerShown: false, contentStyle: styles.content }} />
-    </View>
+    <AddRecipeProvider>
+      <View style={styles.root}>
+        <Navbar />
+        <Stack screenOptions={{ headerShown: false, contentStyle: styles.content }} />
+      </View>
+    </AddRecipeProvider>
   );
 }
 

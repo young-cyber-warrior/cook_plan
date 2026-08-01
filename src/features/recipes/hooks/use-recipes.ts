@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { useMemo, useState } from 'react';
 
 import type { Recipe } from '@/features/recipes/types';
@@ -13,6 +14,11 @@ export function useRecipes(initial: Recipe[]) {
 
       removeRecipe: (id: string) =>
         setRecipes(current => current.filter(item => item.id !== id)),
+
+      addRecipe: (recipe: Recipe) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        setRecipes(current => [...current, recipe]);
+      },
     }),
     [],
   );

@@ -1,4 +1,9 @@
-export type RecipeCategory = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export type RecipeCategory = string;
+
+export interface Category {
+  id: string;
+  label: string;
+}
 
 export type IngredientUnit = 'g' | 'ml';
 

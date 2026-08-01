@@ -10,7 +10,7 @@ import { SelectToggleButton } from '@/features/recipes/components/select-toggle-
 import { useAccordion } from '@/features/recipes/hooks/use-accordion';
 import { useRecipeEditor } from '@/features/recipes/hooks/use-recipe-editor';
 import { categoryLabel } from '@/features/recipes/lib/category-label';
-import type { Recipe } from '@/features/recipes/types';
+import type { Category, Recipe } from '@/features/recipes/types';
 
 /** A Unistyles style inside a Reanimated style array is rejected at runtime. */
 const animatable = RNStyleSheet.create({
@@ -19,8 +19,10 @@ const animatable = RNStyleSheet.create({
 
 interface RecipeCardProps {
   recipe: Recipe;
+  categories: Category[];
   onSave: (recipe: Recipe) => void;
   onDelete: () => void;
+  onCreateCategory: (label: string) => Category;
 }
 
 /**
@@ -28,7 +30,7 @@ interface RecipeCardProps {
  * Edit mode makes the title/category in this header editable too, so the header stops
  * toggling the accordion on tap while it's active — typing shouldn't collapse the card.
  */
-export function RecipeCard({ recipe, onSave, onDelete }: RecipeCardProps) {
+export function RecipeCard({ recipe, categories, onSave, onDelete, onCreateCategory }: RecipeCardProps) {
   const { theme } = useUnistyles();
   const [selected, setSelected] = useState(false);
   const { toggle, onContentLayout, containerStyle } = useAccordion();
@@ -38,7 +40,12 @@ export function RecipeCard({ recipe, onSave, onDelete }: RecipeCardProps) {
   const shown = editing ? draft : recipe;
   const headerContent = editing ? (
     <View style={styles.editHeader}>
-      <CategoryToggle value={shown.category} onChange={updateCategory} />
+      <CategoryToggle
+        categories={categories}
+        value={shown.category}
+        onChange={updateCategory}
+        onCreateCategory={onCreateCategory}
+      />
 
       <View style={styles.titleRow}>
         <TextInput
@@ -60,7 +67,7 @@ export function RecipeCard({ recipe, onSave, onDelete }: RecipeCardProps) {
   ) : (
     <View style={styles.header}>
       <View style={styles.info}>
-        <Text style={styles.category}>{categoryLabel(recipe.category)}</Text>
+        <Text style={styles.category}>{categoryLabel(categories, recipe.category)}</Text>
         <Text style={styles.title} numberOfLines={1}>
           {recipe.title}
         </Text>
