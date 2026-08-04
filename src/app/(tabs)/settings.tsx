@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-// текуший файл схож с NutritionScreen вынести в общтй и просто переадть те даннеы которые отличаються
+
 export default function SettingsScreen() {
   return (
     <View style={styles.container}>

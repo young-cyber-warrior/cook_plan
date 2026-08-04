@@ -3,12 +3,14 @@ import { usePathname } from 'expo-router';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { GroceryNavbarContent } from '@/features/grocery/components/grocery-navbar-content';
 import { RecipesNavbarContent } from '@/features/recipes/components/recipes-navbar-content';
 import { DaysNavbarContent } from '@/features/weeks/components/days-navbar-content';
 
 const CONTENT_BY_PATH: Record<string, ComponentType> = {
   '/': DaysNavbarContent,
   '/recipes': RecipesNavbarContent,
+  '/nutrition': GroceryNavbarContent,
 };
 
 export function Navbar() {
