@@ -1,9 +1,11 @@
+import { observer } from 'mobx-react-lite';
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Calendar, LocaleConfig, type DateData } from 'react-native-calendars';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { useWeeksContext } from '../context/weeks-context';
+import { useWeeksStore } from '@/stores/store-context';
+
 import { maxRangeEnd, occupiedDates, suggestRange } from '../lib/build-week';
 import { eachDay, formatDayCount, formatRange, rangeLength } from '../lib/dates';
 import type { WeekRange } from '../types';
@@ -27,9 +29,9 @@ LocaleConfig.locales.ru = {
 };
 LocaleConfig.defaultLocale = 'ru';
 
-export function WeekRangeEditor() {
+export const WeekRangeEditor = observer(function WeekRangeEditor() {
   const { theme } = useUnistyles();
-  const { weeks, editing, cancelEdit, saveWeek } = useWeeksContext();
+  const { weeks, editing, cancelEdit, saveWeek } = useWeeksStore();
 
   const editedWeek = editing?.weekId ? weeks.find(week => week.id === editing.weekId) : undefined;
   const occupied = useMemo(
@@ -112,7 +114,7 @@ export function WeekRangeEditor() {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create(theme => ({
   root: {

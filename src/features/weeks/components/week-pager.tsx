@@ -1,3 +1,4 @@
+import { observer } from 'mobx-react-lite';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, StyleSheet as RNStyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
@@ -5,8 +6,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { DayPlanCard } from '@/features/day-card/components/day-plan-card';
+import { useWeeksStore } from '@/stores/store-context';
 
-import { useWeeksContext } from '../context/weeks-context';
 import type { Week } from '../types';
 import { WeekDots } from './week-dots';
 
@@ -43,8 +44,8 @@ const WeekPage = memo(function WeekPage({ week, width, onVerticalDrag }: WeekPag
   );
 });
 
-export function WeekPager() {
-  const { weeks, activeIndex, setActiveIndex } = useWeeksContext();
+export const WeekPager = observer(function WeekPager() {
+  const { weeks, activeIndex, setActiveIndex } = useWeeksStore();
   const { width } = useWindowDimensions();
   const pagerRef = useRef<FlatList<Week>>(null);
   /** Index the pager itself is on — guards the sync effect from re-animating a user swipe. */
@@ -109,7 +110,7 @@ export function WeekPager() {
       />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create(theme => ({
   root: {

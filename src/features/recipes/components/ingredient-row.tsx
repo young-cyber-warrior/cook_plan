@@ -3,7 +3,8 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { TrashIcon } from '@/features/day-card/components/icons';
-import { UnitToggle, unitLabel } from '@/features/recipes/components/unit-toggle';
+import { UnitToggle } from '@/features/recipes/components/unit-toggle';
+import { unitLabel } from '@/features/recipes/lib/units';
 import type { Ingredient } from '@/features/recipes/types';
 
 const DANGER = '#E5484D';

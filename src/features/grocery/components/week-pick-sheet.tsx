@@ -1,13 +1,12 @@
+import { observer } from 'mobx-react-lite';
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { BottomSheet } from '@/components/bottom-sheet';
-import { useWeeksContext } from '@/features/weeks/context/weeks-context';
 import { formatRange, todayId } from '@/features/weeks/lib/dates';
 import type { Week } from '@/features/weeks/types';
-
-import { useGroceryContext } from '../context/grocery-context';
+import { useGroceryStore, useWeeksStore } from '@/stores/store-context';
 
 const filledMealCount = (week: Week) =>
   week.days.flatMap(day => day.meals).filter(meal => meal.recipe).length;
@@ -20,12 +19,13 @@ const formatRecipeCount = (count: number) => {
   return `${count} рецептов`;
 };
 
-export function WeekPickSheet() {
-  const { weeks } = useWeeksContext();
-  const { list, sheetVisible, closeSheet, generate } = useGroceryContext();
+export const WeekPickSheet = observer(function WeekPickSheet() {
+  const { weeks } = useWeeksStore();
+  const { list, sheetVisible, closeSheet, generate } = useGroceryStore();
   const [pickedIds, setPickedIds] = useState<string[]>([]);
 
   useEffect(() => {
+    // а что здесь происходит чет намуди=рил и очень сложно
     if (!sheetVisible) return;
     const today = todayId();
     const fallback = weeks.filter(week => today >= week.start && today <= week.end);
@@ -37,7 +37,7 @@ export function WeekPickSheet() {
     setPickedIds(current =>
       current.includes(weekId) ? current.filter(id => id !== weekId) : [...current, weekId],
     );
-
+// зачем тодай создавать два раза 
   const today = todayId();
 
   return (
@@ -71,7 +71,7 @@ export function WeekPickSheet() {
       </Pressable>
     </BottomSheet>
   );
-}
+});
 
 const styles = StyleSheet.create(theme => ({
   heading: {

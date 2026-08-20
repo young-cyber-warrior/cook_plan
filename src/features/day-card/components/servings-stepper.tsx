@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { MAX_SERVINGS, MIN_SERVINGS } from '@/features/day-card/hooks/use-day-plan';
+import { MAX_SERVINGS, MIN_SERVINGS } from '@/features/day-card/lib/servings';
 
 interface ServingsStepperProps {
   value: number;

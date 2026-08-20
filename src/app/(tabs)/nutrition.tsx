@@ -1,9 +1,10 @@
+import { observer } from 'mobx-react-lite';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { GroceryItemCard } from '@/features/grocery/components/grocery-item-card';
 import { WeekPickSheet } from '@/features/grocery/components/week-pick-sheet';
-import { useGroceryContext } from '@/features/grocery/context/grocery-context';
+import { useGroceryStore } from '@/stores/store-context';
 
 const formatRecipeCount = (count: number) => {
   const mod10 = count % 10;
@@ -12,8 +13,8 @@ const formatRecipeCount = (count: number) => {
   return `${count} рецептов`;
 };
 
-export default function NutritionScreen() {
-  const { list, openSheet, toggleItem, setItemAmount, removeItem } = useGroceryContext();
+export default observer(function NutritionScreen() {
+  const { list, openSheet, toggleItem, setItemAmount, removeItem } = useGroceryStore();
 
   if (!list) {
     return (
@@ -60,7 +61,7 @@ export default function NutritionScreen() {
       <WeekPickSheet />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create(theme => ({
   container: {

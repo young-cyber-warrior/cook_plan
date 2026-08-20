@@ -1,33 +1,33 @@
+import { observer } from 'mobx-react-lite';
 import { useCallback } from 'react';
 
 import { DayCard } from '@/features/day-card/components/day-card';
 import { DayCardFooter } from '@/features/day-card/components/day-card-footer';
 import { MealList } from '@/features/day-card/components/meal-list';
-import { useDayPlan } from '@/features/day-card/hooks/use-day-plan';
-import { MOCK_RECIPES } from '@/features/day-card/mock';
 import type { Day, Meal } from '@/features/day-card/types';
+import { useRecipesStore, useWeeksStore } from '@/stores/store-context';
 
 interface DayPlanCardProps {
   day: Day;
 }
 
-/** Owns the state of a single day, so a week is just a list of these. */
-export function DayPlanCard({ day: initialDay }: DayPlanCardProps) {
-  const { day, setServings, attachRecipe, renameMeal, removeMeal, addMeal } =
-    useDayPlan(initialDay);
+export const DayPlanCard = observer(function DayPlanCard({ day }: DayPlanCardProps) {
+  const { setServings, attachRecipe, renameMeal, removeMeal, addMeal } = useWeeksStore();
+  const { findBySlotCategory } = useRecipesStore();
 
-  /* Placeholder until the recipe list route lands: picks the first recipe of the category. */
   const onPickRecipe = useCallback(
     (meal: Meal) => {
-      const recipe = MOCK_RECIPES.find(item => item.category === meal.category);
+      const recipe = findBySlotCategory(meal.category);
 
-      if (recipe) attachRecipe(meal.id, recipe);
+      if (recipe) attachRecipe(meal.id, recipe.id);
     },
-    [attachRecipe],
+    [findBySlotCategory, attachRecipe],
   );
 
-  /* Title and category come from a form later; a snack is the sane default. */
-  const onAddMeal = useCallback(() => addMeal('Перекус', 'snack'), [addMeal]);
+  const onAddMeal = useCallback(
+    () => addMeal(day.weekId, day.id, 'Перекус', 'snack'),
+    [addMeal, day.weekId, day.id],
+  );
 
   return (
     <DayCard day={day}>
@@ -42,4 +42,4 @@ export function DayPlanCard({ day: initialDay }: DayPlanCardProps) {
       <DayCardFooter day={day} />
     </DayCard>
   );
-}
+});

@@ -1,0 +1,82 @@
+config:
+  edition: 3
+
+with:
+  accessible_week_ids: |
+    SELECT id FROM weeks
+    WHERE deleted = false
+      AND (
+        owner_id = auth.user_id()
+        OR id IN (
+          SELECT resource_id FROM shares
+          WHERE user_id = auth.user_id() AND resource_type = 'week' AND deleted = false
+        )
+      )
+  accessible_recipe_ids: |
+    SELECT id FROM recipes
+    WHERE deleted = false
+      AND (
+        owner_id = auth.user_id()
+        OR id IN (
+          SELECT resource_id FROM shares
+          WHERE user_id = auth.user_id() AND resource_type = 'recipe' AND deleted = false
+        )
+        OR id IN (
+          SELECT recipe_id FROM meals
+          WHERE deleted = false
+            AND week_id IN (
+              SELECT id FROM weeks
+              WHERE deleted = false
+                AND (
+                  owner_id = auth.user_id()
+                  OR id IN (
+                    SELECT resource_id FROM shares
+                    WHERE user_id = auth.user_id() AND resource_type = 'week' AND deleted = false
+                  )
+                )
+            )
+        )
+      )
+  accessible_list_ids: |
+    SELECT id FROM grocery_lists
+    WHERE deleted = false
+      AND (
+        owner_id = auth.user_id()
+        OR id IN (
+          SELECT resource_id FROM shares
+          WHERE user_id = auth.user_id() AND resource_type = 'grocery_list' AND deleted = false
+        )
+      )
+
+streams:
+  weeks:
+    auto_subscribe: true
+    queries:
+      - SELECT * FROM weeks WHERE id IN accessible_week_ids
+      - SELECT * FROM meals WHERE deleted = false AND week_id IN accessible_week_ids
+
+  recipes:
+    auto_subscribe: true
+    queries:
+      - SELECT * FROM recipes WHERE id IN accessible_recipe_ids
+      - SELECT * FROM recipe_ingredients WHERE deleted = false AND recipe_id IN accessible_recipe_ids
+      - |
+        SELECT * FROM categories
+        WHERE deleted = false
+          AND (
+            owner_id = auth.user_id()
+            OR id IN (SELECT category_id FROM recipes WHERE id IN accessible_recipe_ids)
+          )
+
+  grocery:
+    auto_subscribe: true
+    queries:
+      - SELECT * FROM grocery_lists WHERE id IN accessible_list_ids
+      - SELECT * FROM grocery_items WHERE deleted = false AND list_id IN accessible_list_ids
+
+  shares:
+    auto_subscribe: true
+    query: |
+      SELECT * FROM shares
+      WHERE deleted = false
+        AND (owner_id = auth.user_id() OR user_id = auth.user_id())

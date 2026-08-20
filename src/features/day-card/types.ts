@@ -30,6 +30,7 @@ export interface Meal {
 
 export interface Day {
   id: string;
+  weekId: string;
   weekday: string;
   /** Default 3 slots (breakfast/lunch/dinner), user may append more. */
   meals: Meal[];

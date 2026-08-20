@@ -1,16 +1,15 @@
+import { observer } from 'mobx-react-lite';
 import { FlatList } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { AddRecipeSheet } from '@/features/recipes/components/add-recipe-sheet';
 import { RecipeCard } from '@/features/recipes/components/recipe-card';
 import { useAddRecipeContext } from '@/features/recipes/context/add-recipe-context';
-import { useCategories } from '@/features/recipes/hooks/use-categories';
-import { useRecipes } from '@/features/recipes/hooks/use-recipes';
-import { MOCK_RECIPES } from '@/features/recipes/mock';
+import { useRecipesStore } from '@/stores/store-context';
 
-export default function RecipesScreen() {
-  const { recipes, saveRecipe, removeRecipe, addRecipe } = useRecipes(MOCK_RECIPES);
-  const { categories, addCategory } = useCategories();
+export default observer(function RecipesScreen() {
+  const { recipes, categories, saveRecipe, removeRecipe, addRecipe, addCategory } =
+    useRecipesStore();
   const { visible, close } = useAddRecipeContext();
 
   return (
@@ -40,7 +39,7 @@ export default function RecipesScreen() {
       />
     </>
   );
-}
+});
 
 const styles = StyleSheet.create(theme => ({
   container: {

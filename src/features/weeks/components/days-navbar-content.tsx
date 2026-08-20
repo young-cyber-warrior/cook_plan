@@ -1,12 +1,15 @@
+import { observer } from 'mobx-react-lite';
 import { Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { useWeeksContext } from '@/features/weeks/context/weeks-context';
 import { formatRange, todayId } from '@/features/weeks/lib/dates';
+import { useWeeksStore } from '@/stores/store-context';
 
-export function DaysNavbarContent() {
-  const { weeks, activeIndex, openSheet } = useWeeksContext();
-  const week = weeks[activeIndex];
+export const DaysNavbarContent = observer(function DaysNavbarContent() {
+  const { weeks, activeIndex, openSheet } = useWeeksStore();
+  const week = weeks[activeIndex] ?? weeks[0];
+  if (!week) return null;
+
   const isCurrent = todayId() >= week.start && todayId() <= week.end;
 
   return (
@@ -18,7 +21,7 @@ export function DaysNavbarContent() {
       </Pressable>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create(theme => ({
   content: {

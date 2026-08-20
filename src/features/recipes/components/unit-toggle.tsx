@@ -1,16 +1,10 @@
 import { Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { INGREDIENT_UNITS, unitLabel } from '@/features/recipes/lib/units';
 import type { IngredientUnit } from '@/features/recipes/types';
 
-const OPTIONS: { unit: IngredientUnit; label: string }[] = [
-  { unit: 'g', label: 'г' },
-  { unit: 'ml', label: 'мл' },
-];
-
-export function unitLabel(unit: IngredientUnit): string {
-  return OPTIONS.find(option => option.unit === unit)?.label ?? unit;
-}
+const OPTIONS = INGREDIENT_UNITS.map(unit => ({ unit, label: unitLabel(unit) }));
 
 interface UnitToggleProps {
   value: IngredientUnit;

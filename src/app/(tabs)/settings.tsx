@@ -1,21 +1,22 @@
+import { observer } from 'mobx-react-lite';
 import { Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { useAuthContext } from '@/features/auth/context/auth-context';
+import { useAuthStore } from '@/stores/store-context';
 
-export default function SettingsScreen() {
-  const { session, signOut } = useAuthContext();
+export default observer(function SettingsScreen() {
+  const { email, signOut } = useAuthStore();
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Аккаунт</Text>
-      <Text style={styles.email}>{session?.user.email}</Text>
+      <Text style={styles.email}>{email}</Text>
       <Pressable style={({ pressed }) => styles.signOutButton(pressed)} onPress={signOut}>
         <Text style={styles.signOutLabel}>Выйти</Text>
       </Pressable>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create(theme => ({
   container: {

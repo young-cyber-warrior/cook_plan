@@ -1,13 +1,14 @@
+import { observer } from 'mobx-react-lite';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { TrashIcon } from '@/features/day-card/components/icons';
+import { useGroceryStore } from '@/stores/store-context';
 
-import { useGroceryContext } from '../context/grocery-context';
 import { RefreshIcon } from './icons';
 
-function GroceryActions() {
-  const { list, hasEdits, refresh, clear } = useGroceryContext();
+const GroceryActions = observer(function GroceryActions() {
+  const { list, hasEdits, refresh, clear } = useGroceryStore();
 
   if (!list) return null;
 
@@ -46,7 +47,7 @@ function GroceryActions() {
       </Pressable>
     </View>
   );
-}
+});
 
 export function GroceryNavbarContent() {
   return (

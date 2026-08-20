@@ -118,20 +118,50 @@ create publication powersync for all tables;
 
 ### Этап 3. Sync Streams — шаринг + realtime (Claude, деплой — Sergey)
 
-| # | Шаг | Ответственный |
-|---|-----|---------------|
-| 3.1 | Написать Sync Streams: «запись синкается юзеру, если он владелец ИЛИ есть строка в `shares`» | **Claude** |
-| 3.2 | Задеплоить правила в PowerSync-дашборд | **Sergey** |
+| # | Шаг | Ответственный | Статус |
+|---|-----|---------------|--------|
+| 3.1 | Написать Sync Streams: «запись синкается юзеру, если он владелец ИЛИ есть строка в `shares`» | **Claude** | ✅ `powersync/sync-streams.yaml` |
+| 3.2 | Задеплоить правила в PowerSync-дашборд | **Sergey** | ✅ version 1 (5e8a) Active, 2026-08-11 |
+
+**3.1 — файл `powersync/sync-streams.yaml`.** Новый синтаксис Sync Streams (`config: edition: 3`), не legacy Sync Rules: streams поддерживают подзапросы, JOIN и CTE — шаринг через `shares` пишется прямо в SQL без параметрических bucket-запросов.
+
+Решения (выбраны в диалоге 2026-08-11):
+
+- **Транзитивный шаринг недели.** Получателю шаренной недели синкаются и рецепты, на которые ссылаются её `meals` (+ их ингредиенты и категории) — иначе слоты пустые: `recipe_id` есть, рецепта локально нет. Работает в обе стороны: редактор поставил свой рецепт в чужую неделю → владелец недели тоже его видит (ветка «рецепты из meals доступных недель» не проверяет владельца рецепта).
+- **Tombstones на клиент не синкаются.** Каждый стрим фильтрует `deleted = false`: после soft-delete запись выпадает из стрима → PowerSync сам удаляет строку из локального SQLite. Отзыв шара работает так же: строка `shares` тумбстонится → ресурс и его дети выпадают из CTE → уезжают с устройства получателя. Watch-запросы этапа 4 всё равно фильтруют `deleted = false` — собственная правка видна в локальной БД до аплоада; но чужие tombstones базу не раздувают.
+- **`auto_subscribe: true` на всех стримах.** Весь доступный юзеру датасет всегда на устройстве, офлайн полный, на этапе 4 нет управления подписками. Параметрические подписки (`subscription.parameter`) — эскалация при росте объёма, не сейчас.
+- **CTE-структура:** глобальные `accessible_week_ids` / `accessible_recipe_ids` / `accessible_list_ids`. CTE не может ссылаться на другой CTE → логика доступности недель продублирована инлайном внутри recipe-CTE (ограничение движка, не забыть при правках держать ветки синхронными).
+
+Заметки для этапа 4 (вытекают из стримов):
+
+- Слот `meals` может ссылаться на рецепт, которого локально больше нет (шар отозвали) — UI обязан переживать «битую» ссылку: показывать слот без рецепта.
+- Чужая категория приезжает только ради отображения шаренного рецепта — в список категорий юзера (создание своих рецептов) не подмешивать, фильтровать по `owner_id`.
+
+**3.2 — деплой (Sergey):** PowerSync Dashboard → проект `meal-planner` → инстанс `Production` → редактор sync rules → заменить содержимое целиком на `powersync/sync-streams.yaml` → `Validate` → `Save and deploy`. Если валидатор отвергнет глубину вложенных подзапросов в `accessible_recipe_ids` — сказать Claude, упростим транзитивную ветку (цена: владелец не увидит рецепт, добавленный редактором в его неделю). Проверка без клиента: включить `Development tokens` в `Client Auth` и дёрнуть `Sync Test` с реальным user id из Supabase.
 
 ### Этап 4. Клиент RN (Claude)
 
-| # | Шаг | Ответственный |
-|---|-----|---------------|
-| 4.1 | Поставить PowerSync RN SDK. **Важно:** нативный модуль — Expo Go не подойдёт, нужен dev client (`npx expo run` / EAS build) | **Claude** (сборка на устройстве — **Sergey**) |
-| 4.2 | Описать клиентскую схему (SQLite-вьюхи поверх синк-данных) | **Claude** |
-| 4.3 | Написать `uploadData()`: заливка очереди в Supabase + field-level LWW по `updated_at` (серверное время), обработка tombstones | **Claude** |
-| 4.4 | Добавить MobX в проект (сейчас его нет — стейт на React-контекстах). Стор-классы как единая точка работы с SQLite: watch-запрос PowerSync → observable, производные значения через `computed`, запись только через actions → SQLite (не напрямую в observable) | **Claude** |
-| 4.5 | Перевести существующие фичи (weeks, recipes, grocery) с контекстов/useState на MobX-сторы поверх PowerSync; компоненты становятся `observer`, UI-стейт (аккордеоны, черновики, модалки) не трогаем | **Claude** |
+| # | Шаг | Ответственный | Статус |
+|---|-----|---------------|--------|
+| 4.1 | Поставить PowerSync RN SDK. **Важно:** нативный модуль — Expo Go не подойдёт, нужен dev client (`npx expo run` / EAS build) | **Claude** (сборка на устройстве — **Sergey**) | ✅ код; ⬜ сборка dev client — Sergey |
+| 4.2 | Описать клиентскую схему (SQLite-вьюхи поверх синк-данных) | **Claude** | ✅ `src/sync/schema.ts` |
+| 4.3 | Написать `uploadData()`: заливка очереди в Supabase + field-level LWW по `updated_at` (серверное время), обработка tombstones | **Claude** | ✅ `src/sync/connector.ts` |
+| 4.4 | Добавить MobX в проект (сейчас его нет — стейт на React-контекстах). Стор-классы как единая точка работы с SQLite: watch-запрос PowerSync → observable, производные значения через `computed`, запись только через actions → SQLite (не напрямую в observable) | **Claude** | ✅ `src/stores/*` |
+| 4.5 | Перевести существующие фичи (weeks, recipes, grocery) с контекстов/useState на MobX-сторы поверх PowerSync; компоненты становятся `observer`, UI-стейт (аккордеоны, черновики, модалки) не трогаем | **Claude** | ✅ |
+
+**Пакеты (4.1):** `@powersync/react-native@2.0.2` + `@op-engineering/op-sqlite@17` (в SDK v2 op-sqlite — прямой peer, отдельный адаптер `@powersync/op-sqlite` больше не нужен; quick-sqlite — легаси, не подходит под New Architecture RN 0.86). Плюс `mobx`, `mobx-react-lite`, `expo-crypto` (UUID). Полифиллы async-итераторов не ставили — везде callback-вариант `watch()`. Веб-поддержку PowerSync решили не делать (проверка только на устройстве/эмуляторе); Platform-ветки для веба из `supabase.ts` убраны.
+
+**Схема (4.2):** 8 таблиц зеркалят серверные минус `field_times` (клиент его не трогает). `deleted`/`checked`/`edited` — integer 0/1, `photos`/`week_ids` — text с JSON. Коннектор при аплоаде конвертит их в boolean/jsonb для PostgREST.
+
+**Коннектор (4.3):** `fetchCredentials` — сессия Supabase (`access_token` + `EXPO_PUBLIC_POWERSYNC_URL`); `uploadData` — `getNextCrudTransaction`: PUT → upsert, PATCH → update только изменённых колонок (PowerSync сам диффит по колонкам — это и есть field-level LWW, порядок прибытия решает сервер), DELETE → защитный update `deleted = true` (нормальный путь удаления — PATCH tombstone; hard delete невозможен и по правам). Фатальные ошибки Postgres (22xxx/23xxx/42501) — лог + discard транзакции, остальное — ретрай.
+
+**Сторы (4.4):** `src/stores/` — `RootStore` (connect/disconnect по сессии: login → `connect`, logout → `disconnectAndClear`), `AuthStore` (сессия перенесена из auth-контекста в MobX, ошибка `getSession` обрабатывается), `WeeksStore`, `RecipesStore`, `GroceryStore`. Паттерн: watch-запрос → observable rows → `computed` собирают UI-модели (Week/Day/Meal с резолвом рецептов) → экшены пишут в SQLite. Все watch фильтруют `deleted = 0` — собственный tombstone виден локально до аплоада. Сидинг при первом входе (после `waitForFirstSync`): 4 дефолтные категории + текущая календарная неделя, если пусто.
+
+**Перевод фич (4.5):** удалены `weeks-context`, `grocery-context`, `auth-context`, `use-recipes`, `use-categories`, `use-day-plan`, оба mock-файла; `build-week.ts` ужат до календарных хелперов (`suggestRange`/`occupiedDates`/`maxRangeEnd`). `AddRecipeContext` (видимость шита) остался — чистый UI-стейт. День получил `weekId`; слот с отозванным рецептом рендерится пустым (заметка этапа 3 учтена: `recipe_id` есть — рецепта нет). Категории в UI фильтруются по `owner_id`.
+
+**Трейдоф:** logout делает `disconnectAndClear` — незалитая очередь офлайн-правок при выходе теряется. Осознанно; если станет проблемой — блокировать выход при непустой очереди (этап 5).
+
+**Проверено на устройстве 2026-08-11 (Sergey):** dev client пересобран (`npx expo run:android`), вход прошёл, сидинг отработал, созданные рецепты видны в Supabase Table Editor с `owner_id`/`category_id` — аплинк и первый синк подтверждены. В Metro бывает разовый `Sync error [Software caused connection abort]` — транзиентный обрыв стрима (фон/смена сети), PowerSync сам переподключается; индикатор статуса синка этапа 5 сделает это видимым в UI.
 
 ### Этап 5. UX синхронизации (Claude)
 

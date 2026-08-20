@@ -2,14 +2,11 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { unitLabel } from '@/features/recipes/lib/units';
+
 import type { GroceryItem } from '../types';
 
 const AMOUNT_STEP = 10;
-
-function formatUnit(unit: GroceryItem['unit']) {
-  if (unit === 'g') return 'г';
-  return 'мл';
-}
 
 interface GroceryItemCardProps {
   item: GroceryItem;
@@ -37,7 +34,7 @@ function CardFooter({ item, editing, onEditingChange, onRemove, onAmountChange }
           <Text style={styles.stepLabel}>−</Text>
         </Pressable>
         <Text style={styles.editAmount}>
-          {item.amount} {formatUnit(item.unit)}
+          {item.amount} {unitLabel(item.unit)}
         </Text>
         <Pressable
           style={({ pressed }) => styles.stepButton(pressed)}
@@ -76,7 +73,7 @@ export function GroceryItemCard({ item, onToggle, onRemove, onAmountChange }: Gr
           {item.name}
         </Text>
         <Text style={styles.amount(item.checked)}>
-          {item.amount} {formatUnit(item.unit)}
+          {item.amount} {unitLabel(item.unit)}
           {item.edited ? ' *' : ''}
         </Text>
       </Pressable>

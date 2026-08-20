@@ -1,14 +1,15 @@
+import { observer } from 'mobx-react-lite';
 import { Pressable, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BottomSheet } from '@/components/bottom-sheet';
 import { PencilIcon, PlusIcon, TrashIcon } from '@/features/day-card/components/icons';
+import { useWeeksStore } from '@/stores/store-context';
 
-import { useWeeksContext } from '../context/weeks-context';
 import { formatDayCount, formatRange, rangeLength, todayId } from '../lib/dates';
 import { WeekRangeEditor } from './week-range-editor';
 
-export function WeeksSheet() {
+export const WeeksSheet = observer(function WeeksSheet() {
   const { theme } = useUnistyles();
   const {
     weeks,
@@ -21,7 +22,7 @@ export function WeeksSheet() {
     startAdd,
     startEdit,
     removeWeek,
-  } = useWeeksContext();
+  } = useWeeksStore();
 
   const heading = editing ? (editing.weekId ? 'Даты недели' : 'Новая неделя') : 'Недели';
   const today = todayId();
@@ -87,7 +88,7 @@ export function WeeksSheet() {
       )}
     </BottomSheet>
   );
-}
+});
 
 const styles = StyleSheet.create(theme => ({
   heading: {

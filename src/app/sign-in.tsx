@@ -2,25 +2,34 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { useAuthContext } from '@/features/auth/context/auth-context';
+import type { AuthResult } from '@/stores/auth-store';
+import { useAuthStore } from '@/stores/store-context';
+
+interface SignInForm {
+  email: string;
+  password: string;
+  error: string | null;
+  busy: boolean;
+}
+
+const initialForm: SignInForm = { email: '', password: '', error: null, busy: false };
 
 export default function SignInScreen() {
-  // почему так коряво разве нельзя все жэти сеттй обьеденить во что-то? или потом в mobx все это переренесем когда его добавим ?
   const { theme } = useUnistyles();
-  const { signIn, signUp } = useAuthContext();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const { signIn, signUp } = useAuthStore();
+  const [form, setForm] = useState(initialForm);
+  const { email, password, error, busy } = form;
 
+  const setField = (patch: Partial<SignInForm>) => setForm(current => ({ ...current, ...patch }));
+// а где нормальная валидация почты?
+// здесь чет очень сложно ? что ты пытаешь решитьздесь и почему так ?
   const canSubmit = email.trim().length > 0 && password.length > 0 && !busy;
-
-  const submit = async (action: (email: string, password: string) => Promise<string | null>) => {
-    setBusy(true);
-    setError(null);
-    const message = await action(email.trim(), password);
-    if (message) setError(message);
-    setBusy(false);
+// почему нет обработки ошибок?
+  const submit = async (action: (email: string, password: string) => Promise<AuthResult>) => {
+    // зачем идет два обнровления стейта сразу setField ? в чем приична и польза? что значит busy и для чего это ?
+    setField({ busy: true, error: null });
+    const result = await action(email.trim(), password);
+    setField({ busy: false, error: result.ok ? null : result.message });
   };
 
   return (
@@ -34,7 +43,7 @@ export default function SignInScreen() {
         <TextInput
           style={styles.input}
           value={email}
-          onChangeText={setEmail}
+          onChangeText={value => setField({ email: value })}
           placeholder="Почта"
           placeholderTextColor={theme.colors.textMuted}
           selectionColor={theme.colors.accent}
@@ -45,7 +54,7 @@ export default function SignInScreen() {
         <TextInput
           style={styles.input}
           value={password}
-          onChangeText={setPassword}
+          onChangeText={value => setField({ password: value })}
           placeholder="Пароль"
           placeholderTextColor={theme.colors.textMuted}
           selectionColor={theme.colors.accent}
