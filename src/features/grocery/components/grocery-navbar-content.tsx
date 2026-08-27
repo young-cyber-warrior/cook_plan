@@ -8,7 +8,7 @@ import { useGroceryStore } from '@/stores/store-context';
 import { RefreshIcon } from './icons';
 
 const GroceryActions = observer(function GroceryActions() {
-  const { list, hasEdits, refresh, clear } = useGroceryStore();
+  const { list, hasEdits, isStale, refresh, clear } = useGroceryStore();
 
   if (!list) return null;
 
@@ -34,9 +34,10 @@ const GroceryActions = observer(function GroceryActions() {
       <Pressable
         style={({ pressed }) => styles.accentButton(pressed)}
         hitSlop={8}
-        accessibilityLabel="Обновить список"
+        accessibilityLabel={isStale ? 'Обновить список, продукты устарели' : 'Обновить список'}
         onPress={confirmRefresh}>
         <RefreshIcon color="#FFFFFF" size={18} />
+        {isStale ? <View style={styles.staleDot} /> : null}
       </Pressable>
       <Pressable
         style={({ pressed }) => styles.mutedButton(pressed)}
@@ -84,6 +85,15 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.accent,
     opacity: pressed ? 0.85 : 1,
   }),
+  staleDot: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 8,
+    height: 8,
+    borderRadius: theme.radius.full,
+    backgroundColor: '#FFFFFF',
+  },
   mutedButton: (pressed: boolean) => ({
     width: 36,
     height: 36,

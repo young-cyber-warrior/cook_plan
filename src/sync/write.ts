@@ -1,3 +1,7 @@
+export function nowIso(): string {
+  return new Date().toISOString();
+}
+
 export type FieldDiff = [column: string, before: unknown, after: unknown];
 
 export interface UpdateStatement {

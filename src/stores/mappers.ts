@@ -1,3 +1,4 @@
+import { toMealCategory } from '@/features/day-card/lib/meal-category';
 import { DEFAULT_SERVINGS } from '@/features/day-card/lib/servings';
 import type { Recipe as DayCardRecipe, Meal, MealCategory } from '@/features/day-card/types';
 import type { GroceryItem } from '@/features/grocery/types';
@@ -11,21 +12,12 @@ import type {
   RecipeRow,
 } from '@/sync/schema';
 
-export const slugify = (label: string) =>
-  // чт оты здесь пытаешь ся решить?
-  label
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-zа-яё0-9]+/gi, '-')
-    .replace(/^-+|-+$/g, '');
-
 export const isFilledIngredient = (ingredient: Ingredient) =>
   ingredient.name.trim().length > 0 && ingredient.amount > 0;
 
 export function parseStringArray(value: string | null): string[] {
   if (!value) return [];
   try {
-    // что за магия здесь ? если не аррей то вернуть пустой поче так и зачем?
     const parsed = JSON.parse(value);
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -100,15 +92,17 @@ export function groupGroceryItemsByList(rows: GroceryItemRow[]): Map<string, Gro
   return byList;
 }
 
-export const mealCategoryOf = (row: RecipeRow, slugById: Map<string, string>): MealCategory =>
-  (slugById.get(row.category_id ?? '') ?? 'snack') as MealCategory;
+export const mealCategoryOf = (
+  row: RecipeRow,
+  slugById: Map<string, string>,
+): MealCategory | null => toMealCategory(slugById.get(row.category_id ?? ''));
 
 export const mealDayKey = (weekId: string, day: string) => `${weekId}|${day}`;
 
 export const toMeal = (row: MealRow, recipeById: Map<string, DayCardRecipe>): Meal => ({
   id: row.id,
   title: row.title ?? '',
-  category: (row.category ?? 'snack') as MealCategory,
+  category: toMealCategory(row.category) ?? 'snack',
   servings: row.servings ?? DEFAULT_SERVINGS,
   recipe: row.recipe_id ? (recipeById.get(row.recipe_id) ?? null) : null,
 });

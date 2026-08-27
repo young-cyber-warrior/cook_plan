@@ -1,5 +1,12 @@
 type Teardown = () => void;
 
+export class ScopeClosed extends Error {
+  constructor() {
+    super('scope closed');
+    this.name = 'ScopeClosed';
+  }
+}
+
 export class Scope {
   private controller = new AbortController();
   private teardowns = new Set<Teardown>();
@@ -19,6 +26,13 @@ export class Scope {
       return;
     }
     this.teardowns.add(teardown);
+  }
+
+  async wait<T>(promise: Promise<T>): Promise<T> {
+    if (this.closed) throw new ScopeClosed();
+    const value = await promise;
+    if (this.closed) throw new ScopeClosed();
+    return value;
   }
 
   child(): Scope {

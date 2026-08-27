@@ -27,7 +27,6 @@ function collectMealSources(weeks: Week[], weekIds: string[]): MealSource[] {
 
   return sources;
 }
-// buildSourceHash напмсана очень сложно и по перфу очень проблемео столько сортировок что я не понимаю зачем так усложнять !!!!!!!
 export function buildSourceHash(weeks: Week[], weekIds: string[], recipes: Recipe[]): string {
   const usedIds = new Set<string>();
   const sourceParts: string[] = [];
@@ -36,7 +35,6 @@ export function buildSourceHash(weeks: Week[], weekIds: string[], recipes: Recip
     usedIds.add(source.recipeId);
     sourceParts.push(`${source.recipeId}:${source.servings}`);
   }
-  // а что здесь такое для чего делать сорт?
   sourceParts.sort();
 
   const recipeParts: string[] = [];
@@ -49,13 +47,9 @@ export function buildSourceHash(weeks: Week[], weekIds: string[], recipes: Recip
         `${recipe.id}/${normalizeName(ingredient.name)}:${ingredient.amount}${ingredient.unit}`,
       );
     }
-  // а что здесь такое для чего делать сорт?
-
     ingredientParts.sort();
     recipeParts.push(ingredientParts.join(','));
   }
-  // а что здесь такое для чего делать сорт?
-
   recipeParts.sort();
 
   const parts = sourceParts.concat(recipeParts).join(';');
@@ -73,7 +67,6 @@ export function buildGroceryList(
   recipes: Recipe[],
   previous: GroceryList | null,
 ): GroceryList {
-  // а не дорого для каждого раза генерить new Map и new Set это оправдоанор ?
   const recipeById = new Map(recipes.map(recipe => [recipe.id, recipe]));
   const checkedKeys = new Set(
     previous?.items.filter(item => item.checked).map(item => item.key) ?? [],

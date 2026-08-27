@@ -1,4 +1,3 @@
-import * as Haptics from 'expo-haptics';
 import { useEffect, useRef } from 'react';
 import {
   interpolate,
@@ -12,6 +11,7 @@ import {
 import { useUnistyles } from 'react-native-unistyles';
 
 import type { DayProgress } from '@/features/day-card/types';
+import { haptics } from '@/lib/haptics';
 
 /** All geometry is authored in this box, then scaled by the SVG viewBox. */
 export const BOX = 44;
@@ -57,7 +57,7 @@ export function useProgressRing(progress: DayProgress) {
 
   useEffect(() => {
     if (progress.isComplete && !wasComplete.current) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.succeeded();
     }
 
     wasComplete.current = progress.isComplete;

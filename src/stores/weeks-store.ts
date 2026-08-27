@@ -1,15 +1,15 @@
 import { randomUUID } from 'expo-crypto';
-import * as Haptics from 'expo-haptics';
 import { makeAutoObservable, runInAction } from 'mobx';
 
 import { clampServings, DEFAULT_SERVINGS } from '@/features/day-card/lib/servings';
 import type { Day, MealCategory } from '@/features/day-card/types';
 import { eachDay, weekdayName, type DateId } from '@/features/weeks/lib/dates';
 import type { Week, WeekRange } from '@/features/weeks/types';
+import { haptics } from '@/lib/haptics';
 import type { Scope } from '@/lib/scope';
 import { powersync } from '@/sync/database';
 import type { MealRow, WeekRow } from '@/sync/schema';
-import { buildUpdate } from '@/sync/write';
+import { buildUpdate, nowIso } from '@/sync/write';
 
 import { groupMealsByWeekDay, mealDayKey, toMeal } from './mappers';
 import type { RootStore } from './root-store';
@@ -128,7 +128,7 @@ export class WeeksStore {
     if (editingId) {
       this.resizeWeek(editingId, range);
     } else {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      haptics.created();
       this.insertWeek(range);
       this.activeIndex = this.weekRows.reduce(
         (before, row) => ((row.start_date ?? '') <= range.start ? before + 1 : before),
@@ -142,19 +142,21 @@ export class WeeksStore {
   insertWeek(range: WeekRange): string {
     const id = randomUUID();
     const ownerId = this.root.auth.userId;
-    const now = new Date().toISOString();
+    const now = nowIso();
 
     this.root.write(
       'weeks.insertWeek',
-      powersync.writeTransaction(async tx => {
-        await tx.execute(
-          'insert into weeks (id, owner_id, start_date, end_date, deleted, created_at) values (?, ?, ?, ?, 0, ?)',
-          [id, ownerId, range.start, range.end, now],
-        );
-        for (const dateId of eachDay(range.start, range.end)) {
-          await this.insertDefaultSlots(tx, id, dateId, now);
-        }
-      }),
+      () =>
+        powersync.writeTransaction(async tx => {
+          await tx.execute(
+            'insert into weeks (id, owner_id, start_date, end_date, deleted, created_at) values (?, ?, ?, ?, 0, ?)',
+            [id, ownerId, range.start, range.end, now],
+          );
+          for (const dateId of eachDay(range.start, range.end)) {
+            await this.insertDefaultSlots(tx, id, dateId, now);
+          }
+        }),
+      { id, range },
     );
 
     return id;
@@ -174,7 +176,7 @@ export class WeeksStore {
     const row = this.weekRowById.get(weekId);
     if (!row) return;
 
-    const now = new Date().toISOString();
+    const now = nowIso();
     const previousDays = new Set(eachDay((row.start_date ?? '') as DateId, (row.end_date ?? '') as DateId));
     const nextDays = eachDay(range.start, range.end);
     const nextDaySet = new Set(nextDays);
@@ -186,26 +188,28 @@ export class WeeksStore {
 
     this.root.write(
       'weeks.resizeWeek',
-      powersync.writeTransaction(async tx => {
-        if (weekUpdate) {
-          await tx.execute(weekUpdate.sql, weekUpdate.args);
-        }
-
-        for (const day of previousDays) {
-          if (!nextDaySet.has(day)) {
-            await tx.execute('update meals set deleted = 1 where week_id = ? and day = ?', [
-              weekId,
-              day,
-            ]);
+      () =>
+        powersync.writeTransaction(async tx => {
+          if (weekUpdate) {
+            await tx.execute(weekUpdate.sql, weekUpdate.args);
           }
-        }
 
-        for (const day of nextDays) {
-          if (!previousDays.has(day)) {
-            await this.insertDefaultSlots(tx, weekId, day, now);
+          for (const day of previousDays) {
+            if (!nextDaySet.has(day)) {
+              await tx.execute('update meals set deleted = 1 where week_id = ? and day = ?', [
+                weekId,
+                day,
+              ]);
+            }
           }
-        }
-      }),
+
+          for (const day of nextDays) {
+            if (!previousDays.has(day)) {
+              await this.insertDefaultSlots(tx, weekId, day, now);
+            }
+          }
+        }),
+      { weekId, range },
     );
   }
 
@@ -216,48 +220,54 @@ export class WeeksStore {
 
     this.root.write(
       'weeks.removeWeek',
-      powersync.writeTransaction(async tx => {
-        await tx.execute('update weeks set deleted = 1 where id = ?', [weekId]);
-        await tx.execute('update meals set deleted = 1 where week_id = ?', [weekId]);
-      }),
+      () =>
+        powersync.writeTransaction(async tx => {
+          await tx.execute('update weeks set deleted = 1 where id = ?', [weekId]);
+          await tx.execute('update meals set deleted = 1 where week_id = ?', [weekId]);
+        }),
+      { weekId },
     );
   }
 
   setServings(mealId: string, servings: number) {
     this.root.write(
       'weeks.setServings',
-      powersync.execute('update meals set servings = ? where id = ?', [
-        clampServings(servings),
-        mealId,
-      ]),
+      () =>
+        powersync.execute('update meals set servings = ? where id = ?', [
+          clampServings(servings),
+          mealId,
+        ]),
+      { mealId, servings },
     );
   }
-// для чег оиспользуется Haptics.impactAsync
   attachRecipe(mealId: string, recipeId: string) {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    haptics.created();
     this.root.write(
       'weeks.attachRecipe',
-      powersync.execute('update meals set recipe_id = ? where id = ?', [recipeId, mealId]),
+      () => powersync.execute('update meals set recipe_id = ? where id = ?', [recipeId, mealId]),
+      { mealId, recipeId },
     );
   }
 
   detachRecipe(mealId: string) {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.removed();
     this.root.write(
       'weeks.detachRecipe',
-      powersync.execute('update meals set recipe_id = null where id = ?', [mealId]),
+      () => powersync.execute('update meals set recipe_id = null where id = ?', [mealId]),
+      { mealId },
     );
   }
 
   renameMeal(mealId: string, title: string) {
     this.root.write(
       'weeks.renameMeal',
-      powersync.execute('update meals set title = ? where id = ?', [title, mealId]),
+      () => powersync.execute('update meals set title = ? where id = ?', [title, mealId]),
+      { mealId },
     );
   }
 
   addMeal(weekId: string, dayId: DateId, title: string, category: MealCategory) {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    haptics.created();
     const position = (this.mealRowsByWeekDay.get(mealDayKey(weekId, dayId)) ?? []).reduce(
       (max, row) => Math.max(max, (row.position ?? 0) + 1),
       0,
@@ -265,28 +275,31 @@ export class WeeksStore {
 
     this.root.write(
       'weeks.addMeal',
-      powersync.execute(
-        'insert into meals (id, owner_id, week_id, day, title, category, servings, position, deleted, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)',
-        [
-          randomUUID(),
-          this.root.auth.userId,
-          weekId,
-          dayId,
-          title,
-          category,
-          DEFAULT_SERVINGS,
-          position,
-          new Date().toISOString(),
-        ],
-      ),
+      () =>
+        powersync.execute(
+          'insert into meals (id, owner_id, week_id, day, title, category, servings, position, deleted, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)',
+          [
+            randomUUID(),
+            this.root.auth.userId,
+            weekId,
+            dayId,
+            title,
+            category,
+            DEFAULT_SERVINGS,
+            position,
+            nowIso(),
+          ],
+        ),
+      { weekId, dayId, category },
     );
   }
 
   removeMeal(mealId: string) {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.removed();
     this.root.write(
       'weeks.removeMeal',
-      powersync.execute('update meals set deleted = 1 where id = ?', [mealId]),
+      () => powersync.execute('update meals set deleted = 1 where id = ?', [mealId]),
+      { mealId },
     );
   }
 }

@@ -1,10 +1,11 @@
-import * as Haptics from 'expo-haptics';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import type { ColorValue } from 'react-native';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+
+import { haptics } from '@/lib/haptics';
 
 type TabBarIconRenderer = (props: { focused: boolean; color: ColorValue; size: number }) => React.ReactNode;
 
@@ -19,7 +20,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         const onPress = () => {
           const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
           if (!focused && !event.defaultPrevented) {
-            Haptics.selectionAsync();
+            haptics.toggled();
             navigation.navigate(route.name);
           }
         };

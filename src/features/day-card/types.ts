@@ -12,7 +12,7 @@ export interface Macros {
 export interface Recipe {
   id: string;
   title: string;
-  category: MealCategory;
+  category: MealCategory | null;
   /** Collage source. Header shows up to 3, tap opens the full slider. */
   photos: string[];
   macrosPerServing: Macros;

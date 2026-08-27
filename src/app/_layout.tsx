@@ -19,9 +19,9 @@ export default function RootLayout() {
 }
 
 const RootNavigator = observer(function RootNavigator() {
-  const { session, ready } = useAuthStore();
-// в чем смысл ready? и почему он выставляеся в finally? и что заняит ready?
-  if (!ready) return null;
+  const { session, sessionChecked } = useAuthStore();
+
+  if (!sessionChecked) return null;
 
   return (
     <View style={styles.root}>

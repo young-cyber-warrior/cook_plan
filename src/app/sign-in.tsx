@@ -5,31 +5,33 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { AuthResult } from '@/stores/auth-store';
 import { useAuthStore } from '@/stores/store-context';
 
+type FormStatus = { kind: 'idle' } | { kind: 'sending' } | { kind: 'error'; message: string };
+
 interface SignInForm {
   email: string;
   password: string;
-  error: string | null;
-  busy: boolean;
+  status: FormStatus;
 }
 
-const initialForm: SignInForm = { email: '', password: '', error: null, busy: false };
+const initialForm: SignInForm = { email: '', password: '', status: { kind: 'idle' } };
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignInScreen() {
   const { theme } = useUnistyles();
   const { signIn, signUp } = useAuthStore();
   const [form, setForm] = useState(initialForm);
-  const { email, password, error, busy } = form;
+  const { email, password, status } = form;
 
   const setField = (patch: Partial<SignInForm>) => setForm(current => ({ ...current, ...patch }));
-// а где нормальная валидация почты?
-// здесь чет очень сложно ? что ты пытаешь решитьздесь и почему так ?
-  const canSubmit = email.trim().length > 0 && password.length > 0 && !busy;
-// почему нет обработки ошибок?
+  const emailValid = EMAIL_PATTERN.test(email.trim());
+  const emailError = email.length > 0 && !emailValid ? 'Проверь адрес почты' : null;
+  const filled = emailValid && password.length > 0;
+  const canSubmit = filled && status.kind !== 'sending';
   const submit = async (action: (email: string, password: string) => Promise<AuthResult>) => {
-    // зачем идет два обнровления стейта сразу setField ? в чем приична и польза? что значит busy и для чего это ?
-    setField({ busy: true, error: null });
+    setField({ status: { kind: 'sending' } });
     const result = await action(email.trim(), password);
-    setField({ busy: false, error: result.ok ? null : result.message });
+    setField({ status: result.ok ? { kind: 'idle' } : { kind: 'error', message: result.message } });
   };
 
   return (
@@ -51,6 +53,7 @@ export default function SignInScreen() {
           autoComplete="email"
           keyboardType="email-address"
         />
+        {emailError ? <Text style={styles.error}>{emailError}</Text> : null}
         <TextInput
           style={styles.input}
           value={password}
@@ -63,7 +66,7 @@ export default function SignInScreen() {
           secureTextEntry
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {status.kind === 'error' ? <Text style={styles.error}>{status.message}</Text> : null}
 
         <Pressable
           style={({ pressed }) => styles.primaryButton(pressed, canSubmit)}
@@ -72,7 +75,7 @@ export default function SignInScreen() {
           <Text style={styles.primaryLabel}>Войти</Text>
         </Pressable>
         <Pressable
-          style={({ pressed }) => styles.secondaryButton(pressed)}
+          style={({ pressed }) => styles.secondaryButton(pressed, canSubmit)}
           disabled={!canSubmit}
           onPress={() => submit(signUp)}>
           <Text style={styles.secondaryLabel}>Создать аккаунт</Text>
@@ -139,12 +142,12 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  secondaryButton: (pressed: boolean) => ({
+  secondaryButton: (pressed: boolean, enabled: boolean) => ({
     alignItems: 'center',
     paddingVertical: theme.spacing.three,
     borderRadius: theme.radius.md,
     backgroundColor: theme.colors.badgeBackground,
-    opacity: pressed ? 0.8 : 1,
+    opacity: !enabled ? 0.5 : pressed ? 0.8 : 1,
   }),
   secondaryLabel: {
     ...theme.typography.body,

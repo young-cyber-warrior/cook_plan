@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { makeAutoObservable } from 'mobx';
 
 import { toMessage } from '@/lib/errors';
+import { log } from '@/lib/log';
 import type { Scope } from '@/lib/scope';
 import { supabase } from '@/lib/supabase';
 
@@ -11,7 +12,7 @@ export type AuthResult = { ok: true } | { ok: false; message: string };
 
 export class AuthStore {
   session: Session | null = null;
-  ready = false;
+  sessionChecked = false;
 
   constructor(private errors: ErrorsStore) {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -29,20 +30,19 @@ export class AuthStore {
     this.session = session;
   }
 
-  private setReady() {
-    this.ready = true;
+  private setSessionChecked() {
+    this.sessionChecked = true;
   }
 
   async init(scope: Scope) {
     try {
-      const { data, error } = await supabase.auth.getSession();
+      const { data, error } = await scope.wait(supabase.auth.getSession());
       if (error) throw error;
-      if (scope.closed) return;
       this.setSession(data.session);
     } catch (error) {
       this.errors.notify('auth.init', error);
     } finally {
-      if (!scope.closed) this.setReady();
+      if (!scope.closed) this.setSessionChecked();
     }
 
     const { data } = supabase.auth.onAuthStateChange((_event, next) => this.setSession(next));
@@ -52,12 +52,15 @@ export class AuthStore {
     source: string,
     send: () => Promise<{ error: unknown }>,
   ): Promise<AuthResult> {
+    const started = Date.now();
+    log.start(source);
     try {
       const { error } = await send();
       if (error) throw error;
+      log.done(source, Date.now() - started);
       return { ok: true };
     } catch (cause) {
-      console.error(source, cause);
+      log.fail(source, Date.now() - started, cause);
       return { ok: false, message: toMessage(cause) };
     }
   }

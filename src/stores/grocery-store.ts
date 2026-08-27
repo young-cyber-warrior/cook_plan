@@ -1,17 +1,17 @@
 import { randomUUID } from 'expo-crypto';
-import * as Haptics from 'expo-haptics';
 import { makeAutoObservable, runInAction } from 'mobx';
 
-import { buildGroceryList, itemKey } from '@/features/grocery/lib/build-list';
+import { buildGroceryList, buildSourceHash, itemKey } from '@/features/grocery/lib/build-list';
 import type { GroceryList } from '@/features/grocery/types';
+import { haptics } from '@/lib/haptics';
 import type { Scope } from '@/lib/scope';
 import { powersync } from '@/sync/database';
 import type { GroceryItemRow, GroceryListRow } from '@/sync/schema';
+import { nowIso } from '@/sync/write';
 
 import { groupGroceryItemsByList, parseStringArray, toGroceryItem } from './mappers';
 import type { RootStore } from './root-store';
 
-//  общий вопрсо к await для всех сторов  почему нет аборта или закрытеи запроса когда скажем долгое время запроса или закрывается пррилодженеи ? это очень важно !!!!
 export class GroceryStore {
   listRows: GroceryListRow[] = [];
   itemRows: GroceryItemRow[] = [];
@@ -20,7 +20,6 @@ export class GroceryStore {
   constructor(private root: RootStore) {
     makeAutoObservable(this, {}, { autoBind: true });
   }
-// для чего нужен startWatching что он делает?
   startWatching(scope: Scope) {
     powersync.watch(
       'select * from grocery_lists where deleted = 0 order by created_at desc',
@@ -71,6 +70,18 @@ export class GroceryStore {
     };
   }
 
+  get isStale(): boolean {
+    const row = this.activeRow;
+    if (!row) return false;
+
+    const current = buildSourceHash(
+      this.root.weeks.weeks,
+      parseStringArray(row.week_ids),
+      this.root.recipes.recipes,
+    );
+    return current !== (row.source_hash ?? '');
+  }
+
   get hasEdits(): boolean {
     const row = this.activeRow;
     if (!row) return false;
@@ -84,9 +95,8 @@ export class GroceryStore {
   closeSheet() {
     this.sheetVisible = false;
   }
-// как получать логи при выполнени действяи ? я смотрю что очень много есть write и нужно проучить логи чтоб понимать как все идет и где еаличто сломалосьч что-то !
   generate(weekIds: string[]) {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    haptics.created();
 
     const previousRow = this.activeRow;
     const previousForBuild: GroceryList | null = previousRow
@@ -110,41 +120,49 @@ export class GroceryStore {
 
     const ownerId = this.root.auth.userId;
     const listId = randomUUID();
-    // что за toISOString и почему иенно так ? а не андроид ?
-    const now = new Date().toISOString();
+    const now = nowIso();
 
     this.root.write(
       'grocery.generate',
-      powersync.writeTransaction(async tx => {
-        if (previousRow) {
-          await tx.execute('update grocery_lists set deleted = 1 where id = ?', [previousRow.id]);
-          await tx.execute('update grocery_items set deleted = 1 where list_id = ?', [
-            previousRow.id,
-          ]);
-        }
+      () =>
+        powersync.writeTransaction(async tx => {
+          if (previousRow) {
+            await tx.execute('update grocery_lists set deleted = 1 where id = ?', [previousRow.id]);
+            await tx.execute('update grocery_items set deleted = 1 where list_id = ?', [
+              previousRow.id,
+            ]);
+          }
 
-        await tx.execute(
-          'insert into grocery_lists (id, owner_id, week_ids, source_hash, recipe_count, deleted, created_at) values (?, ?, ?, ?, ?, 0, ?)',
-          [listId, ownerId, JSON.stringify(built.weekIds), built.sourceHash, built.recipeCount, now],
-        );
-
-        for (const item of built.items) {
           await tx.execute(
-            'insert into grocery_items (id, owner_id, list_id, name, amount, unit, checked, edited, deleted, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)',
+            'insert into grocery_lists (id, owner_id, week_ids, source_hash, recipe_count, deleted, created_at) values (?, ?, ?, ?, ?, 0, ?)',
             [
-              randomUUID(),
-              ownerId,
               listId,
-              item.name,
-              item.amount,
-              item.unit,
-              item.checked ? 1 : 0,
-              0,
+              ownerId,
+              JSON.stringify(built.weekIds),
+              built.sourceHash,
+              built.recipeCount,
               now,
             ],
           );
-        }
-      }),
+
+          for (const item of built.items) {
+            await tx.execute(
+              'insert into grocery_items (id, owner_id, list_id, name, amount, unit, checked, edited, deleted, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)',
+              [
+                randomUUID(),
+                ownerId,
+                listId,
+                item.name,
+                item.amount,
+                item.unit,
+                item.checked ? 1 : 0,
+                0,
+                now,
+              ],
+            );
+          }
+        }),
+      { listId, items: built.items.length, weeks: built.weekIds.length },
     );
 
     this.sheetVisible = false;
@@ -161,42 +179,41 @@ export class GroceryStore {
 
     this.root.write(
       'grocery.clear',
-      powersync.writeTransaction(async tx => {
-        await tx.execute('update grocery_lists set deleted = 1 where id = ?', [row.id]);
-        await tx.execute('update grocery_items set deleted = 1 where list_id = ?', [row.id]);
-      }),
+      () =>
+        powersync.writeTransaction(async tx => {
+          await tx.execute('update grocery_lists set deleted = 1 where id = ?', [row.id]);
+          await tx.execute('update grocery_items set deleted = 1 where list_id = ?', [row.id]);
+        }),
+      { listId: row.id },
     );
   }
 
   toggleItem(id: string) {
-    Haptics.selectionAsync();
-    // а не лишне здесь делать поиск а потом все равно запускать powersync.execute?
-    const item = this.itemRows.find(row => row.id === id);
-    if (!item) return;
+    haptics.toggled();
     this.root.write(
       'grocery.toggleItem',
-      powersync.execute('update grocery_items set checked = ? where id = ?', [
-        item.checked ? 0 : 1,
-        id,
-      ]),
+      () => powersync.execute('update grocery_items set checked = 1 - checked where id = ?', [id]),
+      { id },
     );
   }
 
   setItemAmount(id: string, amount: number) {
     this.root.write(
       'grocery.setItemAmount',
-      // зачем писать здесь текст ? это типа команда ?
-      powersync.execute('update grocery_items set amount = ?, edited = 1 where id = ?', [
-        amount,
-        id,
-      ]),
+      () =>
+        powersync.execute('update grocery_items set amount = ?, edited = 1 where id = ?', [
+          amount,
+          id,
+        ]),
+      { id, amount },
     );
   }
 
   removeItem(id: string) {
     this.root.write(
       'grocery.removeItem',
-      powersync.execute('update grocery_items set deleted = 1 where id = ?', [id]),
+      () => powersync.execute('update grocery_items set deleted = 1 where id = ?', [id]),
+      { id },
     );
   }
 }

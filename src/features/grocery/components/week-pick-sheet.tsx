@@ -1,9 +1,10 @@
 import { observer } from 'mobx-react-lite';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { BottomSheet } from '@/components/bottom-sheet';
+import { initialPick } from '@/features/grocery/lib/pick-weeks';
 import { formatRange, todayId } from '@/features/weeks/lib/dates';
 import type { Week } from '@/features/weeks/types';
 import { useGroceryStore, useWeeksStore } from '@/stores/store-context';
@@ -24,21 +25,20 @@ export const WeekPickSheet = observer(function WeekPickSheet() {
   const { list, sheetVisible, closeSheet, generate } = useGroceryStore();
   const [pickedIds, setPickedIds] = useState<string[]>([]);
 
+  const wasVisible = useRef(false);
+  const today = todayId();
+
   useEffect(() => {
-    // а что здесь происходит чет намуди=рил и очень сложно
-    if (!sheetVisible) return;
-    const today = todayId();
-    const fallback = weeks.filter(week => today >= week.start && today <= week.end);
-    const previous = weeks.filter(week => list?.weekIds.includes(week.id));
-    setPickedIds((previous.length > 0 ? previous : fallback).map(week => week.id));
-  }, [sheetVisible, weeks, list]);
+    if (sheetVisible && !wasVisible.current) {
+      setPickedIds(initialPick(weeks, list?.weekIds ?? [], today));
+    }
+    wasVisible.current = sheetVisible;
+  }, [sheetVisible, weeks, list, today]);
 
   const togglePicked = (weekId: string) =>
     setPickedIds(current =>
       current.includes(weekId) ? current.filter(id => id !== weekId) : [...current, weekId],
     );
-// зачем тодай создавать два раза 
-  const today = todayId();
 
   return (
     <BottomSheet
