@@ -3,16 +3,21 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { MacroBreakdown } from '@/components/macro-breakdown';
-import { dayMacros } from '@/features/day-card/lib/nutrition';
-import type { Day } from '@/features/day-card/types';
+import { PersonalMacrosChip } from '@/features/day-card/components/personal-macros-chip';
+import { dayMacros, hasPersonalEdits, personalDelta } from '@/features/day-card/lib/nutrition';
+import type { Day, PersonalLayer } from '@/features/day-card/types';
 
 interface DayCardFooterProps {
   day: Day;
+  personal: PersonalLayer;
+  onEdit: () => void;
 }
 
-/** Day totals: everything here recomputes from the meals above. */
-export function DayCardFooter({ day }: DayCardFooterProps) {
-  const macros = useMemo(() => dayMacros(day), [day]);
+/** Day totals: everything here recomputes from the meals above plus personal edits. */
+export function DayCardFooter({ day, personal, onEdit }: DayCardFooterProps) {
+  const macros = useMemo(() => dayMacros(day, personal), [day, personal]);
+  const edited = useMemo(() => hasPersonalEdits(day, personal), [day, personal]);
+  const delta = useMemo(() => personalDelta(day, personal), [day, personal]);
 
   return (
     <View style={styles.root}>
@@ -25,6 +30,8 @@ export function DayCardFooter({ day }: DayCardFooterProps) {
       </View>
 
       <MacroBreakdown macros={macros} />
+
+      <PersonalMacrosChip hasEdits={edited} delta={delta} onPress={onEdit} />
     </View>
   );
 }

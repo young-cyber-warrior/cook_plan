@@ -33,6 +33,10 @@ export function useWeeksStore() {
   return useRootStore().weeks;
 }
 
+export function usePersonalStore() {
+  return useRootStore().personal;
+}
+
 export function useRecipesStore() {
   return useRootStore().recipes;
 }
@@ -43,4 +47,12 @@ export function useGroceryStore() {
 
 export function useFamilyStore() {
   return useRootStore().family;
+}
+
+export function useMealPickStore() {
+  return useRootStore().mealPick;
+}
+
+export function useSyncStore() {
+  return useRootStore().sync;
 }

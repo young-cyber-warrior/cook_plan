@@ -1,7 +1,13 @@
-import type { Day, DayProgress, Macros, MacroSplit, Meal } from '@/features/day-card/types';
-
-/** Calories per gram, used to weight the footer stacked bar. */
-const KCAL_PER_GRAM = { protein: 4, fat: 9, carbs: 4 } as const;
+import type {
+  Day,
+  DayExtra,
+  DayProgress,
+  Macros,
+  MacroSplit,
+  Meal,
+  MealAdjustment,
+  PersonalLayer,
+} from '@/features/day-card/types';
 
 export const EMPTY_MACROS: Macros = { calories: 0, protein: 0, fat: 0, carbs: 0 };
 
@@ -25,15 +31,42 @@ export function addMacros(a: Macros, b: Macros): Macros {
   };
 }
 
-/** Empty slot contributes nothing. */
-export function mealMacros(meal: Meal): Macros {
-  if (!meal.recipe) return EMPTY_MACROS;
+export const EMPTY_LAYER: PersonalLayer = { adjustmentByMealId: new Map(), extras: [] };
 
-  return scaleMacros(meal.recipe.macrosPerServing, meal.servings);
+/** Personal servings win over the family plan; `null` falls back to it. */
+export function effectiveServings(meal: Meal, adjustment?: MealAdjustment): number {
+  return adjustment?.servings ?? meal.servings;
 }
 
-export function dayMacros(day: Day): Macros {
-  return day.meals.reduce<Macros>((acc, meal) => addMacros(acc, mealMacros(meal)), EMPTY_MACROS);
+/** Empty slot and personally skipped meal both contribute nothing. */
+export function mealMacros(meal: Meal, adjustment?: MealAdjustment): Macros {
+  if (!meal.recipe || adjustment?.skipped) return EMPTY_MACROS;
+
+  return scaleMacros(meal.recipe.macrosPerServing, effectiveServings(meal, adjustment));
+}
+
+export function extrasMacros(extras: DayExtra[]): Macros {
+  return extras.reduce<Macros>((acc, extra) => addMacros(acc, extra.macros), EMPTY_MACROS);
+}
+
+export function dayMacros(day: Day, personal: PersonalLayer = EMPTY_LAYER): Macros {
+  const planned = day.meals.reduce<Macros>(
+    (acc, meal) => addMacros(acc, mealMacros(meal, personal.adjustmentByMealId.get(meal.id))),
+    EMPTY_MACROS,
+  );
+
+  return addMacros(planned, extrasMacros(personal.extras));
+}
+
+/** Calorie gap between the personal day and the untouched family plan. */
+export function personalDelta(day: Day, personal: PersonalLayer): number {
+  return dayMacros(day, personal).calories - dayMacros(day).calories;
+}
+
+export function hasPersonalEdits(day: Day, personal: PersonalLayer): boolean {
+  if (personal.extras.length > 0) return true;
+
+  return day.meals.some(meal => personal.adjustmentByMealId.has(meal.id));
 }
 
 export function isMealFilled(meal: Meal): boolean {
@@ -53,16 +86,18 @@ export function dayProgress(day: Day): DayProgress {
 }
 
 /**
- * Macro shares of total energy, normalised to sum 1.
+ * Macro shares by weight, normalised to sum 1: a segment is as wide as its grams
+ * next to the other two, so the bar matches the numbers printed under it.
  * Falls back to zeros so the bar renders empty instead of NaN-wide.
  */
 export function macroSplit(macros: Macros): MacroSplit {
-  const protein = macros.protein * KCAL_PER_GRAM.protein;
-  const fat = macros.fat * KCAL_PER_GRAM.fat;
-  const carbs = macros.carbs * KCAL_PER_GRAM.carbs;
-  const total = protein + fat + carbs;
+  const total = macros.protein + macros.fat + macros.carbs;
 
   if (total === 0) return { protein: 0, fat: 0, carbs: 0 };
 
-  return { protein: protein / total, fat: fat / total, carbs: carbs / total };
+  return {
+    protein: macros.protein / total,
+    fat: macros.fat / total,
+    carbs: macros.carbs / total,
+  };
 }

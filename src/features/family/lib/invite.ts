@@ -1,5 +1,4 @@
-import { createURL } from 'expo-linking';
-
+import { shareLink } from '@/lib/link';
 import { createToken } from '@/lib/token';
 
 import type { AcceptInviteReason, AcceptInviteResult, FamilyRole } from '../types';
@@ -21,7 +20,7 @@ const ACCEPT_INVITE_REASONS = new Set<string>(Object.keys(ACCEPT_INVITE_MESSAGES
 export const createInviteToken = createToken;
 
 export function inviteLink(token: string): string {
-  return createURL(`invite/${token}`);
+  return shareLink('invite', token);
 }
 
 export function acceptInviteMessage(reason: AcceptInviteReason): string {

@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { DayCardHeader } from '@/features/day-card/components/day-card-header';
 import { useCollapsible } from '@/features/day-card/hooks/use-collapsible';
-import type { Day } from '@/features/day-card/types';
+import type { Day, PersonalLayer } from '@/features/day-card/types';
 
 /**
  * Static styles for animated views live in the plain RN StyleSheet:
@@ -17,12 +17,13 @@ const animatable = RNStyleSheet.create({
 
 interface DayCardProps {
   day: Day;
+  personal: PersonalLayer;
   /** Meal list and footer, revealed by the accordion. */
   children?: ReactNode;
 }
 
 /** Tapping anywhere on the card toggles the accordion; cards always start collapsed. */
-export function DayCard({ day, children }: DayCardProps) {
+export function DayCard({ day, personal, children }: DayCardProps) {
   const { toggle, onContentLayout, containerStyle } = useCollapsible(false);
 
   return (
@@ -30,7 +31,7 @@ export function DayCard({ day, children }: DayCardProps) {
     <View style={styles.shadow}>
       <View style={styles.clip}>
         <Pressable onPress={toggle} style={({ pressed }) => styles.pressable(pressed)}>
-          <DayCardHeader day={day} />
+          <DayCardHeader day={day} personal={personal} />
         </Pressable>
 
         <Animated.View style={[animatable.collapsible, containerStyle]}>

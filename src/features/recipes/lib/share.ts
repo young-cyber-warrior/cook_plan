@@ -1,5 +1,4 @@
-import { createURL } from 'expo-linking';
-
+import { shareLink } from '@/lib/link';
 import { createToken } from '@/lib/token';
 
 export const createShareToken = createToken;
@@ -15,6 +14,7 @@ export interface SharedRecipePayload {
   recipe: {
     title: string;
     description: string;
+    servings: number;
     calories: number;
     protein: number;
     fat: number;
@@ -50,7 +50,7 @@ const SHARED_RECIPE_MESSAGES: Record<SharedRecipeReason, string> = {
 const SHARED_RECIPE_REASONS = new Set<string>(Object.keys(SHARED_RECIPE_MESSAGES));
 
 export function recipeShareLink(token: string): string {
-  return createURL(`recipe/${token}`);
+  return shareLink('recipe', token);
 }
 
 export function sharedRecipeMessage(reason: SharedRecipeReason): string {

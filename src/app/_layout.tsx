@@ -29,6 +29,7 @@ const RootNavigator = observer(function RootNavigator() {
       <Stack screenOptions={{ headerShown: false, contentStyle: styles.content }}>
         <Stack.Protected guard={!!session}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="day/[weekId]/[dayId]" />
         </Stack.Protected>
         <Stack.Protected guard={!session}>
           <Stack.Screen name="sign-in" />

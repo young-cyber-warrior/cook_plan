@@ -12,7 +12,11 @@ export interface Ingredient {
   name: string;
   amount: number;
   unit: IngredientUnit;
+  recognized: boolean;
+  macroNote: string;
 }
+
+export type MacrosStatus = 'idle' | 'pending' | 'ready' | 'partial' | 'failed';
 
 export interface Macros {
   calories: number;
@@ -26,6 +30,10 @@ export interface Recipe {
   category: RecipeCategory;
   title: string;
   description: string;
+  /** How many servings the ingredient amounts add up to. Macros below are the total for all of them. */
+  servings: number;
   macros: Macros;
+  macrosStatus: MacrosStatus;
+  macrosError: string;
   ingredients: Ingredient[];
 }

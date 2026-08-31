@@ -6,6 +6,7 @@ import {
 } from '@powersync/react-native';
 
 import { supabase } from '@/lib/supabase';
+import type { ErrorsStore } from '@/stores/errors-store';
 
 const FATAL_CODES = [/^22\d{3}$/, /^23\d{3}$/, /^42501$/];
 
@@ -15,6 +16,8 @@ const BOOLEAN_COLUMNS: Record<string, string[]> = {
   recipe_ingredients: ['deleted'],
   weeks: ['deleted'],
   meals: ['deleted'],
+  meal_adjustments: ['deleted', 'skipped'],
+  day_extras: ['deleted'],
   grocery_lists: ['deleted'],
   grocery_items: ['deleted', 'checked', 'edited'],
   shares: ['deleted'],
@@ -72,6 +75,8 @@ async function applyOperation(op: CrudEntry): Promise<void> {
 }
 
 export class SupabaseConnector implements PowerSyncBackendConnector {
+  constructor(private errors: ErrorsStore) {}
+
   async fetchCredentials() {
     const { data, error } = await supabase.auth.getSession();
     if (error) throw error;
@@ -93,7 +98,7 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
       }
     } catch (error) {
       if (!isFatal(error)) throw error;
-      console.error('powersync upload discarded', error);
+      this.errors.notify('powersync.upload', error);
     }
 
     await transaction.complete();

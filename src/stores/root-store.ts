@@ -15,7 +15,10 @@ import { AuthStore } from './auth-store';
 import { ErrorsStore } from './errors-store';
 import { FamilyStore } from './family-store';
 import { GroceryStore } from './grocery-store';
+import { MealPickStore } from './meal-pick-store';
+import { PersonalStore } from './personal-store';
 import { RecipesStore } from './recipes-store';
+import { SyncStore } from './sync-store';
 import { WeeksStore } from './weeks-store';
 
 export class RootStore {
@@ -23,8 +26,11 @@ export class RootStore {
   auth = new AuthStore(this.errors);
   recipes = new RecipesStore(this);
   weeks = new WeeksStore(this);
+  personal = new PersonalStore(this);
   grocery = new GroceryStore(this);
   family = new FamilyStore(this);
+  mealPick = new MealPickStore(this);
+  sync = new SyncStore();
   attachments: AttachmentQueue | null = null;
 
   private connectedUserId: string | null = null;
@@ -50,8 +56,10 @@ export class RootStore {
 
     this.recipes.startWatching(scope);
     this.weeks.startWatching(scope);
+    this.personal.startWatching(scope);
     this.grocery.startWatching(scope);
     this.family.startWatching(scope);
+    this.sync.startWatching(scope);
     void this.auth.init(scope);
 
     scope.add(
@@ -114,7 +122,7 @@ export class RootStore {
       if (userId) {
         if (this.connectedUserId === userId) return;
         this.connectedUserId = userId;
-        await scope.wait(powersync.connect(new SupabaseConnector()));
+        await scope.wait(powersync.connect(new SupabaseConnector(this.errors)));
         await scope.wait(this.startAttachments());
         await this.family.consumePendingInvite(scope);
         await this.recipes.consumePendingShare(scope);

@@ -1,27 +1,29 @@
+import { router } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import { useCallback } from 'react';
 
 import { DayCard } from '@/features/day-card/components/day-card';
 import { DayCardFooter } from '@/features/day-card/components/day-card-footer';
 import { MealList } from '@/features/day-card/components/meal-list';
+import { usePersonalLayer } from '@/features/day-card/hooks/use-personal-day';
 import type { Day, Meal } from '@/features/day-card/types';
-import { useRecipesStore, useWeeksStore } from '@/stores/store-context';
+import { useMealPickStore, useWeeksStore } from '@/stores/store-context';
 
 interface DayPlanCardProps {
   day: Day;
 }
 
 export const DayPlanCard = observer(function DayPlanCard({ day }: DayPlanCardProps) {
-  const { setServings, attachRecipe, renameMeal, removeMeal, addMeal } = useWeeksStore();
-  const { findBySlotCategory } = useRecipesStore();
+  const { setServings, renameMeal, removeMeal, addMeal } = useWeeksStore();
+  const personal = usePersonalLayer(day.weekId, day.id);
+  const { startForMeal } = useMealPickStore();
 
   const onPickRecipe = useCallback(
     (meal: Meal) => {
-      const recipe = findBySlotCategory(meal.category);
-
-      if (recipe) attachRecipe(meal.id, recipe.id);
+      startForMeal(meal, '/');
+      router.navigate('/recipes');
     },
-    [findBySlotCategory, attachRecipe],
+    [startForMeal],
   );
 
   const onAddMeal = useCallback(
@@ -29,8 +31,17 @@ export const DayPlanCard = observer(function DayPlanCard({ day }: DayPlanCardPro
     [addMeal, day.weekId, day.id],
   );
 
+  const onEditMacros = useCallback(
+    () =>
+      router.navigate({
+        pathname: '/day/[weekId]/[dayId]',
+        params: { weekId: day.weekId, dayId: day.id },
+      }),
+    [day.weekId, day.id],
+  );
+
   return (
-    <DayCard day={day}>
+    <DayCard day={day} personal={personal}>
       <MealList
         meals={day.meals}
         onServingsChange={setServings}
@@ -39,7 +50,7 @@ export const DayPlanCard = observer(function DayPlanCard({ day }: DayPlanCardPro
         onRemoveMeal={removeMeal}
         onAddMeal={onAddMeal}
       />
-      <DayCardFooter day={day} />
+      <DayCardFooter day={day} personal={personal} onEdit={onEditMacros} />
     </DayCard>
   );
 });

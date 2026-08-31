@@ -1,8 +1,9 @@
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { MacroBreakdown } from '@/components/macro-breakdown';
+import { ServingsStepper } from '@/features/day-card/components/servings-stepper';
 import { IngredientList } from '@/features/recipes/components/ingredient-list';
+import { MacrosBlock } from '@/features/recipes/components/macros-block';
 import { RecipeActions } from '@/features/recipes/components/recipe-actions';
 import { RecipePhotoEditor } from '@/features/recipes/components/recipe-photo-editor';
 import type { useRecipeEditor } from '@/features/recipes/hooks/use-recipe-editor';
@@ -21,8 +22,16 @@ interface RecipeDetailsProps {
 export function RecipeDetails({ recipe, editor, onDelete }: RecipeDetailsProps) {
   const { theme } = useUnistyles();
   const store = useRecipesStore();
-  const { editing, draft, toggleEdit, updateDescription, updateIngredient, addIngredient, removeIngredient } =
-    editor;
+  const {
+    editing,
+    draft,
+    toggleEdit,
+    updateDescription,
+    updateServings,
+    updateIngredient,
+    addIngredient,
+    removeIngredient,
+  } = editor;
 
   const shown = editing ? draft : recipe;
 
@@ -44,6 +53,15 @@ export function RecipeDetails({ recipe, editor, onDelete }: RecipeDetailsProps) 
         <Text style={styles.description}>{shown.description}</Text>
       )}
 
+      <View style={styles.servingsRow}>
+        <Text style={styles.servingsLabel}>Порций</Text>
+        {editing ? (
+          <ServingsStepper value={shown.servings} onChange={updateServings} />
+        ) : (
+          <Text style={styles.servingsValue}>{shown.servings}</Text>
+        )}
+      </View>
+
       <View style={styles.ingredientsBlock}>
         <IngredientList
           ingredients={shown.ingredients}
@@ -54,10 +72,7 @@ export function RecipeDetails({ recipe, editor, onDelete }: RecipeDetailsProps) 
         />
       </View>
 
-      <View style={styles.macrosBlock}>
-        <Text style={styles.blockHeading}>Пищевая ценность</Text>
-        <MacroBreakdown macros={recipe.macros} />
-      </View>
+      <MacrosBlock recipe={recipe} />
 
       <View style={styles.actionsRow}>
         <RecipeActions editing={editing} onDelete={onDelete} onEditToggle={toggleEdit} />
@@ -92,23 +107,28 @@ const styles = StyleSheet.create(theme => ({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.colors.accent,
   },
-  ingredientsBlock: {
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.three,
-    backgroundColor: `${theme.colors.accent}12`,
+  servingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.three,
   },
-  macrosBlock: {
-    gap: theme.spacing.two,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.three,
-    backgroundColor: `${theme.colors.success}14`,
-  },
-  blockHeading: {
+  servingsLabel: {
     ...theme.typography.label,
     fontFamily: theme.fonts.sans,
     color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+  },
+  servingsValue: {
+    ...theme.typography.sectionTitle,
+    fontFamily: theme.fonts.sans,
+    color: theme.colors.text,
+  },
+  ingredientsBlock: {
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.three,
+    backgroundColor: `${theme.colors.accent}12`,
   },
   actionsRow: {
     flexDirection: 'row',

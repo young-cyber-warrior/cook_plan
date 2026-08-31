@@ -1,12 +1,22 @@
 import { toMealCategory } from '@/features/day-card/lib/meal-category';
+import { scaleMacros } from '@/features/day-card/lib/nutrition';
 import { DEFAULT_SERVINGS } from '@/features/day-card/lib/servings';
-import type { Recipe as DayCardRecipe, Meal, MealCategory } from '@/features/day-card/types';
+import type {
+  DayExtra,
+  Recipe as DayCardRecipe,
+  Meal,
+  MealAdjustment,
+  MealCategory,
+} from '@/features/day-card/types';
 import type { GroceryItem } from '@/features/grocery/types';
+import { toMacrosStatus } from '@/features/recipes/lib/macros-status';
 import { toIngredientUnit } from '@/features/recipes/lib/units';
 import type { Category, Ingredient, Recipe } from '@/features/recipes/types';
 import type {
   CategoryRow,
+  DayExtraRow,
   GroceryItemRow,
+  MealAdjustmentRow,
   MealRow,
   RecipeIngredientRow,
   RecipeRow,
@@ -30,6 +40,8 @@ export const toIngredient = (row: RecipeIngredientRow): Ingredient => ({
   name: row.name ?? '',
   amount: row.amount ?? 0,
   unit: toIngredientUnit(row.unit),
+  recognized: row.recognized !== 0,
+  macroNote: row.macro_note ?? '',
 });
 
 export function groupIngredientsByRecipe(rows: RecipeIngredientRow[]): Map<string, Ingredient[]> {
@@ -45,17 +57,22 @@ export function groupIngredientsByRecipe(rows: RecipeIngredientRow[]): Map<strin
   return byRecipe;
 }
 
+export const recipeServings = (row: RecipeRow) => Math.max(1, row.servings ?? 1);
+
 export const toRecipe = (row: RecipeRow, ingredients: Ingredient[]): Recipe => ({
   id: row.id,
   category: row.category_id ?? '',
   title: row.title ?? '',
   description: row.description ?? '',
+  servings: recipeServings(row),
   macros: {
     calories: row.calories ?? 0,
     protein: row.protein ?? 0,
     fat: row.fat ?? 0,
     carbs: row.carbs ?? 0,
   },
+  macrosStatus: toMacrosStatus(row.macros_status),
+  macrosError: row.macros_error ?? '',
   ingredients,
 });
 
@@ -121,6 +138,40 @@ export function groupMealsByWeekDay(rows: MealRow[]): Map<string, MealRow[]> {
   return byWeekDay;
 }
 
+export const toMealAdjustment = (row: MealAdjustmentRow): MealAdjustment => ({
+  id: row.id,
+  mealId: row.meal_id ?? '',
+  servings: row.servings ?? null,
+  skipped: !!row.skipped,
+});
+
+export const toDayExtra = (row: DayExtraRow): DayExtra => ({
+  id: row.id,
+  name: row.name ?? '',
+  amount: row.amount ?? 0,
+  unit: row.unit ?? '',
+  macros: {
+    calories: row.calories ?? 0,
+    protein: row.protein ?? 0,
+    fat: row.fat ?? 0,
+    carbs: row.carbs ?? 0,
+  },
+});
+
+export function groupDayExtrasByWeekDay(rows: DayExtraRow[]): Map<string, DayExtra[]> {
+  const byWeekDay = new Map<string, DayExtra[]>();
+
+  for (const row of rows) {
+    if (!row.week_id || !row.day) continue;
+    const key = mealDayKey(row.week_id, row.day);
+    const group = byWeekDay.get(key);
+    if (group) group.push(toDayExtra(row));
+    else byWeekDay.set(key, [toDayExtra(row)]);
+  }
+
+  return byWeekDay;
+}
+
 export const toDayCardRecipe = (
   row: RecipeRow,
   slugById: Map<string, string>,
@@ -130,10 +181,14 @@ export const toDayCardRecipe = (
   title: row.title ?? '',
   category: mealCategoryOf(row, slugById),
   photos,
-  macrosPerServing: {
-    calories: row.calories ?? 0,
-    protein: row.protein ?? 0,
-    fat: row.fat ?? 0,
-    carbs: row.carbs ?? 0,
-  },
+  /** Recipe macros are the total for all its servings; a meal counts them per serving. */
+  macrosPerServing: scaleMacros(
+    {
+      calories: row.calories ?? 0,
+      protein: row.protein ?? 0,
+      fat: row.fat ?? 0,
+      carbs: row.carbs ?? 0,
+    },
+    1 / recipeServings(row),
+  ),
 });

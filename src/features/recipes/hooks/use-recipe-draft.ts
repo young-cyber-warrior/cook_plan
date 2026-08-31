@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react';
 
+import { clampServings } from '@/features/day-card/lib/servings';
+import { emptyIngredient } from '@/features/recipes/lib/ingredient';
 import type { Ingredient, Macros, Recipe, RecipeCategory } from '@/features/recipes/types';
 
 const emptyMacros: Macros = { calories: 0, protein: 0, fat: 0, carbs: 0 };
@@ -9,7 +11,10 @@ const emptyDraft = (category: RecipeCategory): Recipe => ({
   category,
   title: '',
   description: '',
+  servings: 1,
   macros: emptyMacros,
+  macrosStatus: 'idle',
+  macrosError: '',
   ingredients: [],
 });
 
@@ -37,6 +42,10 @@ export function useRecipeDraft(defaultCategory: RecipeCategory) {
     setDraft(current => ({ ...current, description }));
   }, []);
 
+  const updateServings = useCallback((servings: number) => {
+    setDraft(current => ({ ...current, servings: clampServings(servings) }));
+  }, []);
+
   const updateIngredient = useCallback((id: string, patch: Partial<Ingredient>) => {
     setDraft(current => ({
       ...current,
@@ -49,10 +58,7 @@ export function useRecipeDraft(defaultCategory: RecipeCategory) {
   const addIngredient = useCallback(() => {
     setDraft(current => ({
       ...current,
-      ingredients: [
-        ...current.ingredients,
-        { id: `ing-${Date.now()}`, name: '', amount: 0, unit: 'g' },
-      ],
+      ingredients: [...current.ingredients, emptyIngredient(`ing-${Date.now()}`)],
     }));
   }, []);
 
@@ -83,6 +89,7 @@ export function useRecipeDraft(defaultCategory: RecipeCategory) {
     updateTitle,
     updateCategory,
     updateDescription,
+    updateServings,
     updateIngredient,
     addIngredient,
     removeIngredient,
