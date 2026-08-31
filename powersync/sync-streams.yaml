@@ -7,6 +7,14 @@ with:
     WHERE deleted = false
       AND (
         owner_id = auth.user_id()
+        OR owner_id IN (
+          SELECT user_id FROM family_members
+          WHERE deleted = false
+            AND family_id IN (
+              SELECT family_id FROM family_members
+              WHERE user_id = auth.user_id() AND deleted = false
+            )
+        )
         OR id IN (
           SELECT resource_id FROM shares
           WHERE user_id = auth.user_id() AND resource_type = 'week' AND deleted = false
@@ -17,6 +25,14 @@ with:
     WHERE deleted = false
       AND (
         owner_id = auth.user_id()
+        OR owner_id IN (
+          SELECT user_id FROM family_members
+          WHERE deleted = false
+            AND family_id IN (
+              SELECT family_id FROM family_members
+              WHERE user_id = auth.user_id() AND deleted = false
+            )
+        )
         OR id IN (
           SELECT resource_id FROM shares
           WHERE user_id = auth.user_id() AND resource_type = 'recipe' AND deleted = false
@@ -29,6 +45,14 @@ with:
               WHERE deleted = false
                 AND (
                   owner_id = auth.user_id()
+                  OR owner_id IN (
+                    SELECT user_id FROM family_members
+                    WHERE deleted = false
+                      AND family_id IN (
+                        SELECT family_id FROM family_members
+                        WHERE user_id = auth.user_id() AND deleted = false
+                      )
+                  )
                   OR id IN (
                     SELECT resource_id FROM shares
                     WHERE user_id = auth.user_id() AND resource_type = 'week' AND deleted = false
@@ -42,6 +66,14 @@ with:
     WHERE deleted = false
       AND (
         owner_id = auth.user_id()
+        OR owner_id IN (
+          SELECT user_id FROM family_members
+          WHERE deleted = false
+            AND family_id IN (
+              SELECT family_id FROM family_members
+              WHERE user_id = auth.user_id() AND deleted = false
+            )
+        )
         OR id IN (
           SELECT resource_id FROM shares
           WHERE user_id = auth.user_id() AND resource_type = 'grocery_list' AND deleted = false
@@ -60,11 +92,20 @@ streams:
     queries:
       - SELECT * FROM recipes WHERE id IN accessible_recipe_ids
       - SELECT * FROM recipe_ingredients WHERE deleted = false AND recipe_id IN accessible_recipe_ids
+      - SELECT * FROM recipe_photos WHERE deleted = false AND recipe_id IN accessible_recipe_ids
       - |
         SELECT * FROM categories
         WHERE deleted = false
           AND (
             owner_id = auth.user_id()
+            OR owner_id IN (
+              SELECT user_id FROM family_members
+              WHERE deleted = false
+                AND family_id IN (
+                  SELECT family_id FROM family_members
+                  WHERE user_id = auth.user_id() AND deleted = false
+                )
+            )
             OR id IN (SELECT category_id FROM recipes WHERE id IN accessible_recipe_ids)
           )
 
@@ -73,6 +114,31 @@ streams:
     queries:
       - SELECT * FROM grocery_lists WHERE id IN accessible_list_ids
       - SELECT * FROM grocery_items WHERE deleted = false AND list_id IN accessible_list_ids
+
+  family:
+    auto_subscribe: true
+    queries:
+      - |
+        SELECT * FROM families
+        WHERE deleted = false
+          AND id IN (
+            SELECT family_id FROM family_members
+            WHERE user_id = auth.user_id() AND deleted = false
+          )
+      - |
+        SELECT * FROM family_members
+        WHERE deleted = false
+          AND family_id IN (
+            SELECT family_id FROM family_members
+            WHERE user_id = auth.user_id() AND deleted = false
+          )
+      - |
+        SELECT * FROM invites
+        WHERE deleted = false
+          AND family_id IN (
+            SELECT family_id FROM family_members
+            WHERE user_id = auth.user_id() AND deleted = false AND role = 'owner'
+          )
 
   shares:
     auto_subscribe: true

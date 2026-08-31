@@ -18,7 +18,10 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.myapp"
+      "package": "com.anonymous.myapp",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "single",
@@ -35,6 +38,13 @@
         }
       ],
       "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Нужен доступ к фото, чтобы прикреплять их к рецептам.",
+          "cameraPermission": "Нужен доступ к камере, чтобы снимать фото рецептов."
+        }
+      ],
       "expo-status-bar",
       "expo-web-browser",
       "react-native-edge-to-edge"
@@ -42,6 +52,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9d887886-16ed-4739-9eaa-63745f4f2b95"
+      }
+    },
+    "owner": "sergey1606"
   }
 }

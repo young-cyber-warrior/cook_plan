@@ -1,11 +1,13 @@
-import { Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { MacroBreakdown } from '@/components/macro-breakdown';
 import { IngredientList } from '@/features/recipes/components/ingredient-list';
 import { RecipeActions } from '@/features/recipes/components/recipe-actions';
+import { RecipePhotoEditor } from '@/features/recipes/components/recipe-photo-editor';
 import type { useRecipeEditor } from '@/features/recipes/hooks/use-recipe-editor';
 import type { Recipe } from '@/features/recipes/types';
+import { useRecipesStore } from '@/stores/store-context';
 
 interface RecipeDetailsProps {
   /** Committed recipe — macros always come from here, never the draft. */
@@ -18,6 +20,7 @@ interface RecipeDetailsProps {
 /** Accordion body of a recipe card: description, ingredients, macros (read-only), edit/delete. */
 export function RecipeDetails({ recipe, editor, onDelete }: RecipeDetailsProps) {
   const { theme } = useUnistyles();
+  const store = useRecipesStore();
   const { editing, draft, toggleEdit, updateDescription, updateIngredient, addIngredient, removeIngredient } =
     editor;
 
@@ -25,6 +28,8 @@ export function RecipeDetails({ recipe, editor, onDelete }: RecipeDetailsProps) 
 
   return (
     <View style={styles.root}>
+      <RecipePhotoEditor recipeId={recipe.id} editing={editing} />
+
       {editing ? (
         <TextInput
           style={styles.descriptionInput}
@@ -56,6 +61,12 @@ export function RecipeDetails({ recipe, editor, onDelete }: RecipeDetailsProps) 
 
       <View style={styles.actionsRow}>
         <RecipeActions editing={editing} onDelete={onDelete} onEditToggle={toggleEdit} />
+        {/* да сделай через &&  */}
+        {editing ? null : (
+          <Pressable onPress={() => store.shareRecipe(recipe.id)}>
+            <Text style={styles.shareLabel}>Поделиться</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -102,5 +113,11 @@ const styles = StyleSheet.create(theme => ({
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: theme.spacing.three,
+  },
+  shareLabel: {
+    ...theme.typography.label,
+    fontFamily: theme.fonts.sans,
+    color: theme.colors.accent,
   },
 }));
