@@ -18,10 +18,13 @@ const BOOLEAN_COLUMNS: Record<string, string[]> = {
   grocery_lists: ['deleted'],
   grocery_items: ['deleted', 'checked', 'edited'],
   shares: ['deleted'],
+  families: ['deleted'],
+  family_members: ['deleted'],
+  invites: ['deleted', 'revoked'],
+  recipe_photos: ['deleted'],
 };
 
 const JSON_COLUMNS: Record<string, string[]> = {
-  recipes: ['photos'],
   grocery_lists: ['week_ids'],
 };
 

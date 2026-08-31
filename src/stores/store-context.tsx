@@ -40,3 +40,7 @@ export function useRecipesStore() {
 export function useGroceryStore() {
   return useRootStore().grocery;
 }
+
+export function useFamilyStore() {
+  return useRootStore().family;
+}

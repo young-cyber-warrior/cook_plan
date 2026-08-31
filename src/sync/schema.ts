@@ -1,4 +1,4 @@
-import { column, Schema, Table, type RowType } from '@powersync/react-native';
+import { AttachmentTable, column, Schema, Table, type RowType } from '@powersync/react-native';
 
 const synced = {
   owner_id: column.text,
@@ -19,7 +19,6 @@ const recipes = new Table(
     category_id: column.text,
     title: column.text,
     description: column.text,
-    photos: column.text,
     calories: column.real,
     protein: column.real,
     fat: column.real,
@@ -89,6 +88,48 @@ const shares = new Table({
   ...synced,
 });
 
+const recipe_photos = new Table(
+  {
+    recipe_id: column.text,
+    storage_path: column.text,
+    content_hash: column.text,
+    width: column.integer,
+    height: column.integer,
+    bytes: column.integer,
+    position: column.integer,
+    ...synced,
+  },
+  { indexes: { recipe: ['recipe_id'] } },
+);
+
+const families = new Table({
+  name: column.text,
+  ...synced,
+});
+
+const family_members = new Table(
+  {
+    family_id: column.text,
+    user_id: column.text,
+    role: column.text,
+    ...synced,
+  },
+  { indexes: { family: ['family_id'] } },
+);
+
+const invites = new Table(
+  {
+    family_id: column.text,
+    token: column.text,
+    expires_at: column.text,
+    max_uses: column.integer,
+    uses: column.integer,
+    revoked: column.integer,
+    ...synced,
+  },
+  { indexes: { family: ['family_id'] } },
+);
+
 export const AppSchema = new Schema({
   categories,
   recipes,
@@ -98,6 +139,11 @@ export const AppSchema = new Schema({
   grocery_lists,
   grocery_items,
   shares,
+  families,
+  family_members,
+  invites,
+  recipe_photos,
+  attachments: new AttachmentTable(),
 });
 
 export type CategoryRow = RowType<typeof categories>;
@@ -108,3 +154,7 @@ export type MealRow = RowType<typeof meals>;
 export type GroceryListRow = RowType<typeof grocery_lists>;
 export type GroceryItemRow = RowType<typeof grocery_items>;
 export type ShareRow = RowType<typeof shares>;
+export type FamilyRow = RowType<typeof families>;
+export type FamilyMemberRow = RowType<typeof family_members>;
+export type InviteRow = RowType<typeof invites>;
+export type RecipePhotoRow = RowType<typeof recipe_photos>;

@@ -121,11 +121,15 @@ export function groupMealsByWeekDay(rows: MealRow[]): Map<string, MealRow[]> {
   return byWeekDay;
 }
 
-export const toDayCardRecipe = (row: RecipeRow, slugById: Map<string, string>): DayCardRecipe => ({
+export const toDayCardRecipe = (
+  row: RecipeRow,
+  slugById: Map<string, string>,
+  photos: string[],
+): DayCardRecipe => ({
   id: row.id,
   title: row.title ?? '',
   category: mealCategoryOf(row, slugById),
-  photos: parseStringArray(row.photos),
+  photos,
   macrosPerServing: {
     calories: row.calories ?? 0,
     protein: row.protein ?? 0,
