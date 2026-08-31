@@ -17,13 +17,15 @@ export default observer(function RecipesScreen() {
   const pick = useMealPickStore();
 
   const onConfirm = useCallback(() => {
+    const origin = pick.origin;
     pick.confirm();
-    router.navigate('/');
+    router.navigate(origin);
   }, [pick]);
 
   const onBack = useCallback(() => {
+    const origin = pick.origin;
     pick.cancel();
-    router.navigate('/');
+    router.navigate(origin);
   }, [pick]);
 
   useFocusEffect(useCallback(() => () => pick.cancel(), [pick]));
@@ -48,7 +50,7 @@ export default observer(function RecipesScreen() {
 {/* просто && */}
       {pick.target ? (
         <PickRecipeBar
-          mealTitle={pick.target.mealTitle}
+          confirmLabel={pick.confirmLabel}
           canConfirm={pick.canConfirm}
           onConfirm={onConfirm}
           onBack={onBack}

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { servingsWord } from '@/features/day-card/lib/servings';
 import {
   sharedRecipeMessage,
   type SharedRecipePayload,
@@ -90,7 +91,9 @@ export default observer(function SharedRecipeScreen() {
       ) : null}
 
       <View style={styles.block}>
-        <Text style={styles.blockHeading}>Ингредиенты</Text>
+        <Text style={styles.blockHeading}>
+          Ингредиенты на {payload.recipe.servings} {servingsWord(payload.recipe.servings)}
+        </Text>
         {payload.ingredients.map((item, index) => (
           <Text key={`${item.name}-${index}`} style={styles.ingredient}>
             {item.name} — {item.amount} {unitLabel(toIngredientUnit(item.unit))}

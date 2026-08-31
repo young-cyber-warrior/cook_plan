@@ -26,10 +26,15 @@ export const IngredientRow = memo(function IngredientRow({
 
   if (!editing) {
     return (
-      <View style={styles.row}>
-        <Text style={styles.name} numberOfLines={1}>
-          {ingredient.name}
-        </Text>
+      <View style={styles.readRow(ingredient.recognized)}>
+        <View style={styles.readInfo}>
+          <Text style={styles.name} numberOfLines={1}>
+            {ingredient.name}
+          </Text>
+          {ingredient.recognized ? null : (
+            <Text style={styles.hint}>Не понял продукт — уточни название</Text>
+          )}
+        </View>
         <Text style={styles.amount}>
           {ingredient.amount} {unitLabel(ingredient.unit)}
         </Text>
@@ -73,12 +78,29 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.two,
     paddingVertical: theme.spacing.two,
   },
+  readRow: (recognized: boolean) => ({
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.two,
+    paddingVertical: theme.spacing.two,
+    paddingLeft: recognized ? 0 : theme.spacing.two,
+    borderLeftWidth: recognized ? 0 : 3,
+    borderLeftColor: DANGER,
+  }),
+  readInfo: {
+    flex: 1,
+    gap: theme.spacing.half,
+  },
+  hint: {
+    ...theme.typography.caption,
+    fontFamily: theme.fonts.sans,
+    color: DANGER,
+  },
   name: {
     ...theme.typography.body,
     fontFamily: theme.fonts.sans,
     fontWeight: '600',
     color: theme.colors.text,
-    flex: 1,
   },
   amount: {
     ...theme.typography.body,

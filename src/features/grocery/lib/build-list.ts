@@ -44,7 +44,7 @@ export function buildSourceHash(weeks: Week[], weekIds: string[], recipes: Recip
     const ingredientParts: string[] = [];
     for (const ingredient of recipe.ingredients) {
       ingredientParts.push(
-        `${recipe.id}/${normalizeName(ingredient.name)}:${ingredient.amount}${ingredient.unit}`,
+        `${recipe.id}/${recipe.servings}/${normalizeName(ingredient.name)}:${ingredient.amount}${ingredient.unit}`,
       );
     }
     ingredientParts.sort();
@@ -80,10 +80,13 @@ export function buildGroceryList(
     if (!recipe) continue;
     usedRecipeIds.add(recipe.id);
 
+    /** Ingredient amounts cover the whole recipe, the meal asks for its own serving count. */
+    const factor = source.servings / Math.max(1, recipe.servings);
+
     for (const ingredient of recipe.ingredients) {
       const key = itemKey(ingredient.name, ingredient.unit);
       const existing = merged.get(key);
-      const amount = ingredient.amount * source.servings;
+      const amount = ingredient.amount * factor;
 
       if (existing) {
         existing.amount += amount;
@@ -104,6 +107,8 @@ export function buildGroceryList(
     weekIds,
     sourceHash: buildSourceHash(weeks, weekIds, recipes),
     recipeCount: usedRecipeIds.size,
-    items: [...merged.values()].sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+    items: [...merged.values()]
+      .map(item => ({ ...item, amount: Math.round(item.amount * 10) / 10 }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ru')),
   };
 }

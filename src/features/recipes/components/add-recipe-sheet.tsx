@@ -3,8 +3,10 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BottomSheet } from '@/components/bottom-sheet';
+import { ServingsStepper } from '@/features/day-card/components/servings-stepper';
 import { CategoryToggle } from '@/features/recipes/components/category-toggle';
 import { IngredientList } from '@/features/recipes/components/ingredient-list';
+import { MacrosNotice } from '@/features/recipes/components/macros-notice';
 import { useRecipeDraft } from '@/features/recipes/hooks/use-recipe-draft';
 import type { Category, Recipe } from '@/features/recipes/types';
 
@@ -32,6 +34,7 @@ export function AddRecipeSheet({
     updateTitle,
     updateCategory,
     updateDescription,
+    updateServings,
     updateIngredient,
     addIngredient,
     removeIngredient,
@@ -87,6 +90,14 @@ export function AddRecipeSheet({
       </View>
 
       <View style={styles.block}>
+        <Text style={styles.blockHeading}>Порций</Text>
+        <View style={styles.servingsRow}>
+          <ServingsStepper value={draft.servings} onChange={updateServings} />
+          <Text style={styles.servingsHint}>Ингредиенты ниже — на это количество порций</Text>
+        </View>
+      </View>
+
+      <View style={styles.block}>
         <IngredientList
           ingredients={draft.ingredients}
           editing
@@ -94,6 +105,11 @@ export function AddRecipeSheet({
           onRemove={removeIngredient}
           onAdd={addIngredient}
         />
+      </View>
+
+      <View style={styles.block}>
+        <Text style={styles.blockHeading}>Пищевая ценность</Text>
+        <MacrosNotice />
       </View>
 
       <View style={styles.actions}>
@@ -136,6 +152,17 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+  },
+  servingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.three,
+  },
+  servingsHint: {
+    ...theme.typography.caption,
+    fontFamily: theme.fonts.sans,
+    color: theme.colors.textMuted,
+    flex: 1,
   },
   descriptionInput: {
     ...theme.typography.body,

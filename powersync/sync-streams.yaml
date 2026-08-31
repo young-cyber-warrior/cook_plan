@@ -146,3 +146,9 @@ streams:
       SELECT * FROM shares
       WHERE deleted = false
         AND (owner_id = auth.user_id() OR user_id = auth.user_id())
+
+  personal:
+    auto_subscribe: true
+    queries:
+      - SELECT * FROM meal_adjustments WHERE deleted = false AND owner_id = auth.user_id()
+      - SELECT * FROM day_extras WHERE deleted = false AND owner_id = auth.user_id()

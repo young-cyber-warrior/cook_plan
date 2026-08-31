@@ -5,15 +5,16 @@ import { StyleSheet } from 'react-native-unistyles';
 import { MacroBadge } from '@/features/day-card/components/macro-badge';
 import { ProgressRing } from '@/features/day-card/components/progress-ring';
 import { dayMacros, dayProgress } from '@/features/day-card/lib/nutrition';
-import type { Day } from '@/features/day-card/types';
+import type { Day, PersonalLayer } from '@/features/day-card/types';
 
 interface DayCardHeaderProps {
   day: Day;
+  personal: PersonalLayer;
 }
 
-export const DayCardHeader = memo(function DayCardHeader({ day }: DayCardHeaderProps) {
+export const DayCardHeader = memo(function DayCardHeader({ day, personal }: DayCardHeaderProps) {
   const progress = dayProgress(day);
-  const macros = dayMacros(day);
+  const macros = dayMacros(day, personal);
 
   return (
     <View style={styles.root}>

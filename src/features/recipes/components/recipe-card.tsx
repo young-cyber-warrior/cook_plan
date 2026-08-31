@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { observer } from 'mobx-react-lite';
 import { Pressable, StyleSheet as RNStyleSheet, Text, TextInput, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -11,6 +11,7 @@ import { useAccordion } from '@/features/recipes/hooks/use-accordion';
 import { useRecipeEditor } from '@/features/recipes/hooks/use-recipe-editor';
 import { categoryLabel } from '@/features/recipes/lib/category-label';
 import type { Category, Recipe } from '@/features/recipes/types';
+import { useMealPickStore } from '@/stores/store-context';
 
 /** A Unistyles style inside a Reanimated style array is rejected at runtime. */
 const animatable = RNStyleSheet.create({
@@ -30,9 +31,17 @@ interface RecipeCardProps {
  * Edit mode makes the title/category in this header editable too, so the header stops
  * toggling the accordion on tap while it's active — typing shouldn't collapse the card.
  */
-export function RecipeCard({ recipe, categories, onSave, onDelete, onCreateCategory }: RecipeCardProps) {
+export const RecipeCard = observer(function RecipeCard({
+  recipe,
+  categories,
+  onSave,
+  onDelete,
+  onCreateCategory,
+}: RecipeCardProps) {
   const { theme } = useUnistyles();
-  const [selected, setSelected] = useState(false);
+  const pick = useMealPickStore();
+  const selectable = pick.picking;
+  const selected = pick.isSelected(recipe.id);
   const { toggle, onContentLayout, containerStyle } = useAccordion();
   const editor = useRecipeEditor(recipe, onSave);
   const { editing, draft, updateTitle, updateCategory } = editor;
@@ -57,7 +66,9 @@ export function RecipeCard({ recipe, categories, onSave, onDelete, onCreateCateg
           selectionColor={theme.colors.accent}
         />
 
-        <SelectToggleButton selected={selected} onToggle={() => setSelected(value => !value)} />
+        {selectable ? (
+        <SelectToggleButton selected={selected} onToggle={() => pick.toggle(recipe.id)} />
+      ) : null}
       </View>
 
       <View style={styles.badges}>
@@ -76,13 +87,15 @@ export function RecipeCard({ recipe, categories, onSave, onDelete, onCreateCateg
         </View>
       </View>
 
-      <SelectToggleButton selected={selected} onToggle={() => setSelected(value => !value)} />
+      {selectable ? (
+        <SelectToggleButton selected={selected} onToggle={() => pick.toggle(recipe.id)} />
+      ) : null}
     </View>
   );
 
   return (
     <View style={styles.shadow}>
-      <View style={styles.clip(selected)}>
+      <View style={styles.clip(selectable && selected)}>
         {editing ? (
           headerContent
         ) : (
@@ -99,7 +112,7 @@ export function RecipeCard({ recipe, categories, onSave, onDelete, onCreateCateg
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create(theme => ({
   shadow: {

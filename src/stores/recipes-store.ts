@@ -3,7 +3,7 @@ import { randomUUID } from 'expo-crypto';
 import { makeAutoObservable, runInAction } from 'mobx';
 import { Share } from 'react-native';
 
-import type { Recipe as DayCardRecipe, MealCategory } from '@/features/day-card/types';
+import type { Recipe as DayCardRecipe } from '@/features/day-card/types';
 import {
   MAX_RECIPE_PHOTOS,
   preparePhoto,
@@ -19,6 +19,7 @@ import {
   type SharedRecipePayload,
   type SharedRecipePreview,
 } from '@/features/recipes/lib/share';
+import { ingredientsSignature } from '@/features/recipes/lib/ingredients-signature';
 import type { Category, Ingredient, Recipe } from '@/features/recipes/types';
 import { haptics } from '@/lib/haptics';
 import type { Scope } from '@/lib/scope';
@@ -31,7 +32,7 @@ import { buildUpdate, diffById, nowIso } from '@/sync/write';
 import {
   groupIngredientsByRecipe,
   isFilledIngredient,
-  mealCategoryOf,
+  recipeServings,
   toCategories,
   toDayCardRecipe,
   toRecipe,
@@ -167,12 +168,6 @@ export class RecipesStore {
     );
   }
 
-  findBySlotCategory(category: MealCategory): DayCardRecipe | null {
-    const slugById = this.categorySlugById;
-    const row = this.recipeRows.find(item => mealCategoryOf(item, slugById) === category);
-    return row ? toDayCardRecipe(row, slugById, this.photosByRecipeId.get(row.id) ?? []) : null;
-  }
-
   addCategory(label: string): Category {
     const trimmed = label.trim();
     const id = randomUUID();
@@ -206,17 +201,15 @@ export class RecipesStore {
       () =>
         powersync.writeTransaction(async tx => {
           await tx.execute(
-            'insert into recipes (id, owner_id, category_id, title, description, calories, protein, fat, carbs, deleted, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)',
+            'insert into recipes (id, owner_id, category_id, title, description, servings, calories, protein, fat, carbs, macros_status, deleted, created_at) values (?, ?, ?, ?, ?, ?, 0, 0, 0, 0, ?, 0, ?)',
             [
               recipeId,
               ownerId,
               draft.category,
               draft.title.trim(),
               draft.description,
-              draft.macros.calories,
-              draft.macros.protein,
-              draft.macros.fat,
-              draft.macros.carbs,
+              draft.servings,
+              ingredients.length > 0 ? 'pending' : 'idle',
               now,
             ],
           );
@@ -239,14 +232,23 @@ export class RecipesStore {
     const now = nowIso();
     const nextIngredients = next.ingredients.filter(isFilledIngredient);
     const ingredients = diffById(current.ingredients, nextIngredients);
+    const ingredientsChanged =
+      ingredientsSignature(current.ingredients) !== ingredientsSignature(nextIngredients);
     const recipeUpdate = buildUpdate('recipes', next.id, [
       ['category_id', current.category, next.category],
       ['title', current.title, next.title.trim()],
       ['description', current.description, next.description],
-      ['calories', current.macros.calories, next.macros.calories],
-      ['protein', current.macros.protein, next.macros.protein],
-      ['fat', current.macros.fat, next.macros.fat],
-      ['carbs', current.macros.carbs, next.macros.carbs],
+      ['servings', current.servings, next.servings],
+      ...(ingredientsChanged
+        ? [
+            [
+              'macros_status',
+              current.macrosStatus,
+              nextIngredients.length > 0 ? 'pending' : 'idle',
+            ] as [string, unknown, unknown],
+            ['macros_error', current.macrosError, ''] as [string, unknown, unknown],
+          ]
+        : []),
     ]);
 
     this.root.write(
@@ -365,6 +367,7 @@ export class RecipesStore {
           recipe: {
             title: row.title ?? '',
             description: row.description ?? '',
+            servings: recipeServings(row),
             calories: row.calories ?? 0,
             protein: row.protein ?? 0,
             fat: row.fat ?? 0,

@@ -23,7 +23,14 @@ export function MacroBreakdown({ macros }: MacroBreakdownProps) {
     <View style={styles.root}>
       <View style={styles.bar}>
         {SEGMENTS.map(segment => (
-          <View key={segment.key} style={styles.segment(split[segment.key], segment.color)} />
+          <View
+            key={segment.key}
+            style={{
+              height: '100%',
+              backgroundColor: segment.color,
+              width: `${split[segment.key] * 100}%`,
+            }}
+          />
         ))}
       </View>
 
@@ -53,12 +60,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.progressTrack,
     overflow: 'hidden',
   },
-  /** Zero-share segments collapse to nothing instead of leaving a stub. */
-  segment: (share: number, color: string) => ({
-    flexGrow: share,
-    flexBasis: 0,
-    backgroundColor: color,
-  }),
   columns: {
     flexDirection: 'row',
     gap: theme.spacing.three,

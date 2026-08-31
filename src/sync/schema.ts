@@ -19,10 +19,15 @@ const recipes = new Table(
     category_id: column.text,
     title: column.text,
     description: column.text,
+    servings: column.integer,
     calories: column.real,
     protein: column.real,
     fat: column.real,
     carbs: column.real,
+    macros_status: column.text,
+    macros_hash: column.text,
+    macros_error: column.text,
+    macros_updated_at: column.text,
     ...synced,
   },
   { indexes: { category: ['category_id'] } },
@@ -35,6 +40,8 @@ const recipe_ingredients = new Table(
     amount: column.real,
     unit: column.text,
     position: column.integer,
+    recognized: column.integer,
+    macro_note: column.text,
     ...synced,
   },
   { indexes: { recipe: ['recipe_id'] } },
@@ -58,6 +65,33 @@ const meals = new Table(
     ...synced,
   },
   { indexes: { week: ['week_id'] } },
+);
+
+const meal_adjustments = new Table(
+  {
+    meal_id: column.text,
+    servings: column.integer,
+    skipped: column.integer,
+    ...synced,
+  },
+  { indexes: { meal: ['meal_id'] } },
+);
+
+const day_extras = new Table(
+  {
+    week_id: column.text,
+    day: column.text,
+    name: column.text,
+    amount: column.real,
+    unit: column.text,
+    calories: column.real,
+    protein: column.real,
+    fat: column.real,
+    carbs: column.real,
+    position: column.integer,
+    ...synced,
+  },
+  { indexes: { day: ['week_id', 'day'] } },
 );
 
 const grocery_lists = new Table({
@@ -136,6 +170,8 @@ export const AppSchema = new Schema({
   recipe_ingredients,
   weeks,
   meals,
+  meal_adjustments,
+  day_extras,
   grocery_lists,
   grocery_items,
   shares,
@@ -151,6 +187,8 @@ export type RecipeRow = RowType<typeof recipes>;
 export type RecipeIngredientRow = RowType<typeof recipe_ingredients>;
 export type WeekRow = RowType<typeof weeks>;
 export type MealRow = RowType<typeof meals>;
+export type MealAdjustmentRow = RowType<typeof meal_adjustments>;
+export type DayExtraRow = RowType<typeof day_extras>;
 export type GroceryListRow = RowType<typeof grocery_lists>;
 export type GroceryItemRow = RowType<typeof grocery_items>;
 export type ShareRow = RowType<typeof shares>;

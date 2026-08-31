@@ -36,6 +36,29 @@ export interface Day {
   meals: Meal[];
 }
 
+/** Personal patch over a family meal. `servings === null` keeps the family value. */
+export interface MealAdjustment {
+  id: string;
+  mealId: string;
+  servings: number | null;
+  skipped: boolean;
+}
+
+/** Personal food outside the family plan. Macros are stored, not derived. */
+export interface DayExtra {
+  id: string;
+  name: string;
+  amount: number;
+  unit: string;
+  macros: Macros;
+}
+
+/** Everything the current user changed for one day. Empty layer = family defaults. */
+export interface PersonalLayer {
+  adjustmentByMealId: Map<string, MealAdjustment>;
+  extras: DayExtra[];
+}
+
 /** Header ring state: `2/3` filled with a 0..1 ratio for the arc. */
 export interface DayProgress {
   filled: number;
