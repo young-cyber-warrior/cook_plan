@@ -1,6 +1,7 @@
 import { ExpoFileSystemStorageAdapter } from '@powersync/attachments-storage-react-native';
 import {
   AttachmentQueue,
+  type AttachmentErrorHandler,
   type AttachmentRecord,
   type RemoteStorageAdapter,
   type WatchedAttachmentItem,
@@ -15,6 +16,16 @@ export const PHOTO_MEDIA_TYPE = 'image/jpeg';
 export const PHOTO_EXTENSION = 'jpg';
 
 export const photoStoragePath = (hash: string) => `recipes/${hash}.${PHOTO_EXTENSION}`;
+
+/** React Native's Blob has no `arrayBuffer()`; FileReader is the only route to its bytes. */
+function blobToArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = () => reject(reader.error ?? new Error('could not read the downloaded photo'));
+    reader.readAsArrayBuffer(blob);
+  });
+}
 
 function pathOf(attachment: AttachmentRecord): string {
   const hash = attachment.metaData;
@@ -36,7 +47,7 @@ const remoteStorage: RemoteStorageAdapter = {
   async downloadFile(attachment) {
     const { data, error } = await supabase.storage.from(PHOTO_BUCKET).download(pathOf(attachment));
     if (error) throw error;
-    return data.arrayBuffer();
+    return blobToArrayBuffer(data);
   },
 
   async deleteFile(attachment) {
@@ -84,6 +95,22 @@ function watchAttachments(
 /** The default 30s is a long stall for a photo that failed its first download. */
 const SYNC_INTERVAL_MS = 10_000;
 
+/** Transfers fail silently otherwise: the queue just retries and the tile keeps spinning. */
+const errorHandler: AttachmentErrorHandler = {
+  async onDownloadError(attachment, error) {
+    console.error('attachments.download', attachment.id, attachment.metaData, error);
+    return true;
+  },
+  async onUploadError(attachment, error) {
+    console.error('attachments.upload', attachment.id, attachment.metaData, error);
+    return true;
+  },
+  async onDeleteError(attachment, error) {
+    console.error('attachments.delete', attachment.id, attachment.metaData, error);
+    return true;
+  },
+};
+
 export function createAttachmentQueue(): AttachmentQueue {
   return new AttachmentQueue({
     db: powersync,
@@ -91,5 +118,6 @@ export function createAttachmentQueue(): AttachmentQueue {
     remoteStorage,
     watchAttachments,
     syncIntervalMs: SYNC_INTERVAL_MS,
+    errorHandler,
   });
 }

@@ -27,10 +27,18 @@ export default observer(function NutritionScreen() {
     removeItem,
   } = useGroceryStore();
 
-  const addOwnButton = (
-    <Pressable style={({ pressed }) => styles.secondaryCta(pressed)} onPress={openCustomSheet}>
-      <Text style={styles.secondaryCtaLabel}>Добавить свой продукт</Text>
-    </Pressable>
+  /** Own products outlive the generated list, so the CTA follows the recipe half alone. */
+  const actions = (
+    <>
+      {recipeItems.length === 0 && (
+        <Pressable style={({ pressed }) => styles.cta(pressed)} onPress={openSheet}>
+          <Text style={styles.ctaLabel}>Получить список продуктов</Text>
+        </Pressable>
+      )}
+      <Pressable style={({ pressed }) => styles.secondaryCta(pressed)} onPress={openCustomSheet}>
+        <Text style={styles.secondaryCtaLabel}>Добавить свой продукт</Text>
+      </Pressable>
+    </>
   );
 
   if (recipeItems.length === 0 && customItems.length === 0) {
@@ -38,10 +46,7 @@ export default observer(function NutritionScreen() {
       <View style={styles.container}>
         <View style={styles.empty}>
           <Text style={styles.emptyText}>Список ещё не сформирован.</Text>
-          <Pressable style={({ pressed }) => styles.cta(pressed)} onPress={openSheet}>
-            <Text style={styles.ctaLabel}>Получить список продуктов</Text>
-          </Pressable>
-          {addOwnButton}
+          {actions}
         </View>
 
         <WeekPickSheet />
@@ -91,7 +96,7 @@ export default observer(function NutritionScreen() {
             ) : null}
           </View>
         )}
-        ListFooterComponent={<View style={styles.footer}>{addOwnButton}</View>}
+        ListFooterComponent={<View style={styles.footer}>{actions}</View>}
         renderItem={({ item }) => (
           <GroceryItemCard
             item={item}
@@ -169,6 +174,7 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
   },
   cta: (pressed: boolean) => ({
+    alignItems: 'center',
     paddingVertical: theme.spacing.three,
     paddingHorizontal: theme.spacing.four,
     borderRadius: theme.radius.lg,
@@ -182,6 +188,7 @@ const styles = StyleSheet.create(theme => ({
     color: '#FFFFFF',
   },
   footer: {
+    gap: theme.spacing.two,
     paddingTop: theme.spacing.three,
   },
   secondaryCta: (pressed: boolean) => ({
