@@ -1,16 +1,14 @@
 import { useEffect } from 'react';
 import type { PropsWithChildren, ReactNode } from 'react';
 import {
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet as RNStyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Animated, {
   interpolate,
   interpolateColor,
@@ -51,10 +49,6 @@ export function BottomSheet({ visible, onClose, header, children }: BottomSheetP
   const translateY = useSharedValue(windowHeight);
   const grabbed = useSharedValue(0);
 
-  useEffect(() => {
-    translateY.value = withTiming(visible ? 0 : windowHeight, { duration: 260 });
-  }, [visible, windowHeight, translateY]);
-
   const dismiss = () => {
     translateY.value = withTiming(windowHeight, { duration: 220 });
     onClose();
@@ -82,6 +76,10 @@ export function BottomSheet({ visible, onClose, header, children }: BottomSheetP
       }
     });
 
+  useEffect(() => {
+    translateY.value = withTiming(visible ? 0 : windowHeight, { duration: 260 });
+  }, [visible, windowHeight, translateY]);
+
   const sheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
   }));
@@ -94,35 +92,35 @@ export function BottomSheet({ visible, onClose, header, children }: BottomSheetP
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={dismiss}>
       <GestureHandlerRootView style={styles.root}>
-        <KeyboardAvoidingView
-          style={styles.root}
-          behavior={Platform.select({ ios: 'padding', default: undefined })}>
-          <Pressable style={styles.backdrop} onPress={dismiss} />
+        <Pressable style={styles.backdrop} onPress={dismiss} />
 
-          <Animated.View style={sheetStyle}>
-            <View
-              style={[
-                styles.sheet,
-                {
-                  maxHeight: windowHeight - insets.top - theme.spacing.three,
-                  paddingBottom: insets.bottom + theme.spacing.three,
-                },
-              ]}>
-              <GestureDetector gesture={dragHandle}>
-                <View style={styles.handleArea}>
-                  <View style={styles.grabberRow}>
-                    <Animated.View style={[animatable.grabber, grabberStyle]} />
-                  </View>
-                  {header}
+        <Animated.View style={sheetStyle}>
+          <View
+            style={[
+              styles.sheet,
+              {
+                maxHeight: windowHeight - insets.top - theme.spacing.three,
+                paddingBottom: insets.bottom + theme.spacing.three,
+              },
+            ]}>
+            <GestureDetector gesture={dragHandle}>
+              <View style={styles.handleArea}>
+                <View style={styles.grabberRow}>
+                  <Animated.View style={[animatable.grabber, grabberStyle]} />
                 </View>
-              </GestureDetector>
+                {header}
+              </View>
+            </GestureDetector>
 
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-                {children}
-              </ScrollView>
-            </View>
-          </Animated.View>
-        </KeyboardAvoidingView>
+            <KeyboardAwareScrollView
+              mode="layout"
+              bottomOffset={theme.spacing.five}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}>
+              {children}
+            </KeyboardAwareScrollView>
+          </View>
+        </Animated.View>
       </GestureHandlerRootView>
     </Modal>
   );

@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import { View } from 'react-native';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { ErrorBanner } from '@/components/error-banner';
@@ -10,11 +11,13 @@ import { StoreProvider, useAuthStore } from '@/stores/store-context';
 
 export default function RootLayout() {
   return (
-    <StoreProvider>
-      <AddRecipeProvider>
-        <RootNavigator />
-      </AddRecipeProvider>
-    </StoreProvider>
+    <KeyboardProvider>
+      <StoreProvider>
+        <AddRecipeProvider>
+          <RootNavigator />
+        </AddRecipeProvider>
+      </StoreProvider>
+    </KeyboardProvider>
   );
 }
 

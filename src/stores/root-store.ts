@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { type AttachmentQueue } from '@powersync/react-native';
 import { randomUUID } from 'expo-crypto';
 import { reaction } from 'mobx';
@@ -20,6 +21,8 @@ import { PersonalStore } from './personal-store';
 import { RecipesStore } from './recipes-store';
 import { SyncStore } from './sync-store';
 import { WeeksStore } from './weeks-store';
+
+const LAST_USER_KEY = 'sync.lastUserId';
 
 export class RootStore {
   errors = new ErrorsStore();
@@ -92,7 +95,15 @@ export class RootStore {
 
     this.attachments = null;
     await queue.stopSync();
-    await queue.clearQueue();
+  }
+
+  /**
+   * Signing out keeps the local database and the downloaded photos: the same account
+   * signing back in has nothing to re-download. Another account must not inherit them.
+   */
+  private async discardLocalData() {
+    await createAttachmentQueue().clearQueue();
+    await powersync.disconnectAndClear();
   }
 
   async redeemPendingInvite() {
@@ -122,6 +133,13 @@ export class RootStore {
       if (userId) {
         if (this.connectedUserId === userId) return;
         this.connectedUserId = userId;
+
+        const previousUserId = await scope.wait(AsyncStorage.getItem(LAST_USER_KEY));
+        if (previousUserId && previousUserId !== userId) {
+          await scope.wait(this.discardLocalData());
+        }
+        await scope.wait(AsyncStorage.setItem(LAST_USER_KEY, userId));
+
         await scope.wait(powersync.connect(new SupabaseConnector(this.errors)));
         await scope.wait(this.startAttachments());
         await this.family.consumePendingInvite(scope);
@@ -130,7 +148,7 @@ export class RootStore {
       } else if (this.connectedUserId) {
         this.connectedUserId = null;
         await scope.wait(this.stopAttachments());
-        await scope.wait(powersync.disconnectAndClear());
+        await scope.wait(powersync.disconnect());
       }
     } catch (cause) {
       this.errors.notify('sync.connect', cause);

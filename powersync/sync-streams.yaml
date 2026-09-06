@@ -114,6 +114,21 @@ streams:
     queries:
       - SELECT * FROM grocery_lists WHERE id IN accessible_list_ids
       - SELECT * FROM grocery_items WHERE deleted = false AND list_id IN accessible_list_ids
+      - |
+        SELECT * FROM grocery_items
+        WHERE deleted = false
+          AND list_id IS NULL
+          AND (
+            owner_id = auth.user_id()
+            OR owner_id IN (
+              SELECT user_id FROM family_members
+              WHERE deleted = false
+                AND family_id IN (
+                  SELECT family_id FROM family_members
+                  WHERE user_id = auth.user_id() AND deleted = false
+                )
+            )
+          )
 
   family:
     auto_subscribe: true

@@ -2,7 +2,8 @@ import { randomUUID } from 'expo-crypto';
 import { makeAutoObservable, runInAction } from 'mobx';
 
 import { buildGroceryList, buildSourceHash, itemKey } from '@/features/grocery/lib/build-list';
-import type { GroceryList } from '@/features/grocery/types';
+import type { GroceryItem, GroceryList } from '@/features/grocery/types';
+import type { Unit } from '@/features/recipes/types';
 import { haptics } from '@/lib/haptics';
 import type { Scope } from '@/lib/scope';
 import { powersync } from '@/sync/database';
@@ -12,10 +13,14 @@ import { nowIso } from '@/sync/write';
 import { groupGroceryItemsByList, parseStringArray, toGroceryItem } from './mappers';
 import type { RootStore } from './root-store';
 
+const sortByName = (rows: GroceryItemRow[]): GroceryItem[] =>
+  rows.map(toGroceryItem).sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+
 export class GroceryStore {
   listRows: GroceryListRow[] = [];
   itemRows: GroceryItemRow[] = [];
   sheetVisible = false;
+  customSheetVisible = false;
 
   constructor(private root: RootStore) {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -64,10 +69,18 @@ export class GroceryStore {
       weekIds: parseStringArray(row.week_ids),
       sourceHash: row.source_hash ?? '',
       recipeCount: row.recipe_count ?? 0,
-      items: (this.itemRowsByListId.get(row.id) ?? [])
-        .map(toGroceryItem)
-        .sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+      items: this.recipeItems,
     };
+  }
+
+  get recipeItems(): GroceryItem[] {
+    const row = this.activeRow;
+    return sortByName(row ? (this.itemRowsByListId.get(row.id) ?? []) : []);
+  }
+
+  /** Products added by hand outlive the generated list, so they carry no `list_id`. */
+  get customItems(): GroceryItem[] {
+    return sortByName(this.itemRows.filter(row => !row.list_id));
   }
 
   get isStale(): boolean {
@@ -94,6 +107,31 @@ export class GroceryStore {
 
   closeSheet() {
     this.sheetVisible = false;
+  }
+
+  openCustomSheet() {
+    this.customSheetVisible = true;
+  }
+
+  closeCustomSheet() {
+    this.customSheetVisible = false;
+  }
+
+  addCustomItem(name: string, amount: number, unit: Unit) {
+    haptics.created();
+    const id = randomUUID();
+
+    this.root.write(
+      'grocery.addCustomItem',
+      () =>
+        powersync.execute(
+          'insert into grocery_items (id, owner_id, list_id, name, amount, unit, checked, edited, deleted, created_at) values (?, ?, null, ?, ?, ?, 0, 0, 0, ?)',
+          [id, this.root.auth.userId, name, amount, unit, nowIso()],
+        ),
+      { id },
+    );
+
+    this.customSheetVisible = false;
   }
   generate(weekIds: string[]) {
     haptics.created();

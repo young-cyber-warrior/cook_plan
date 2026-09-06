@@ -7,7 +7,10 @@ import { ServingsStepper } from '@/features/day-card/components/servings-stepper
 import { CategoryToggle } from '@/features/recipes/components/category-toggle';
 import { IngredientList } from '@/features/recipes/components/ingredient-list';
 import { MacrosNotice } from '@/features/recipes/components/macros-notice';
+import { PhotoTiles } from '@/features/recipes/components/photo-tiles';
+import { usePhotoPicker } from '@/features/recipes/hooks/use-photo-picker';
 import { useRecipeDraft } from '@/features/recipes/hooks/use-recipe-draft';
+import { MAX_RECIPE_PHOTOS, type PhotoSource } from '@/features/recipes/lib/photo-pipeline';
 import type { Category, Recipe } from '@/features/recipes/types';
 
 interface AddRecipeSheetProps {
@@ -15,7 +18,7 @@ interface AddRecipeSheetProps {
   categories: Category[];
   onClose: () => void;
   onCreateCategory: (label: string) => Category;
-  onSave: (recipe: Recipe) => void;
+  onSave: (recipe: Recipe, photos: PhotoSource[]) => void;
 }
 
 export function AddRecipeSheet({
@@ -28,9 +31,12 @@ export function AddRecipeSheet({
   const { theme } = useUnistyles();
   const {
     draft,
+    photos,
     isValid,
     reset,
     commit,
+    addPhoto,
+    removePhoto,
     updateTitle,
     updateCategory,
     updateDescription,
@@ -39,6 +45,7 @@ export function AddRecipeSheet({
     addIngredient,
     removeIngredient,
   } = useRecipeDraft(categories[0]?.id ?? '');
+  const { pick, capture } = usePhotoPicker(addPhoto);
 
   useEffect(() => {
     if (visible) reset();
@@ -48,7 +55,7 @@ export function AddRecipeSheet({
     const recipe = commit();
     if (!recipe) return;
 
-    onSave(recipe);
+    onSave(recipe, photos);
     onClose();
   };
 
@@ -104,6 +111,18 @@ export function AddRecipeSheet({
           onChange={updateIngredient}
           onRemove={removeIngredient}
           onAdd={addIngredient}
+        />
+      </View>
+
+      <View style={styles.block}>
+        <Text style={styles.blockHeading}>Фото</Text>
+        <PhotoTiles
+          photos={photos.map(photo => ({ id: photo.uri, uri: photo.uri }))}
+          editing
+          canAdd={photos.length < MAX_RECIPE_PHOTOS}
+          onRemove={removePhoto}
+          onPick={pick}
+          onCapture={capture}
         />
       </View>
 

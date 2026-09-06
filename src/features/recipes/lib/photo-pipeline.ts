@@ -68,7 +68,7 @@ export async function preparePhoto(source: PhotoSource): Promise<PreparedPhoto> 
 
   return {
     data,
-    hash: toHex(await digest(CryptoDigestAlgorithm.SHA256, data)),
+    hash: toHex(await digest(CryptoDigestAlgorithm.SHA256, new Uint8Array(data))),
     width: saved.width,
     height: saved.height,
     bytes: data.byteLength,

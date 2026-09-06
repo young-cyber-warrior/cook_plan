@@ -1,10 +1,10 @@
-import type { IngredientUnit } from '@/features/recipes/types';
+import type { Unit } from '@/features/recipes/types';
 
 export interface GroceryItem {
   key: string;
   name: string;
   amount: number;
-  unit: IngredientUnit;
+  unit: Unit;
   checked: boolean;
   edited: boolean;
 }

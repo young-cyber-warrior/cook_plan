@@ -81,11 +81,15 @@ function watchAttachments(
   );
 }
 
+/** The default 30s is a long stall for a photo that failed its first download. */
+const SYNC_INTERVAL_MS = 10_000;
+
 export function createAttachmentQueue(): AttachmentQueue {
   return new AttachmentQueue({
     db: powersync,
     localStorage: new ExpoFileSystemStorageAdapter(),
     remoteStorage,
     watchAttachments,
+    syncIntervalMs: SYNC_INTERVAL_MS,
   });
 }

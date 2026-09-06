@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet as RNStyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import type { AuthResult } from '@/stores/auth-store';
@@ -17,8 +19,15 @@ const initialForm: SignInForm = { email: '', password: '', status: { kind: 'idle
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** A Unistyles style inside a Reanimated style array is rejected at runtime. */
+const animatable = RNStyleSheet.create({
+  scroll: { flex: 1 },
+  content: { flexGrow: 1, justifyContent: 'center' },
+});
+
 export default function SignInScreen() {
   const { theme } = useUnistyles();
+  const insets = useSafeAreaInsets();
   const { signIn, signUp } = useAuthStore();
   const [form, setForm] = useState(initialForm);
   const { email, password, status } = form;
@@ -35,7 +44,20 @@ export default function SignInScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAwareScrollView
+      style={[animatable.scroll, { backgroundColor: theme.colors.background }]}
+      contentContainerStyle={[
+        animatable.content,
+        {
+          paddingTop: insets.top + theme.spacing.three,
+          paddingBottom: insets.bottom + theme.spacing.three,
+          paddingHorizontal: theme.spacing.three,
+        },
+      ]}
+      mode="layout"
+      bottomOffset={theme.spacing.five}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}>
       <View style={styles.card}>
         <Text style={styles.title}>Планер еды</Text>
         <Text style={styles.subtitle}>
@@ -81,18 +103,11 @@ export default function SignInScreen() {
           <Text style={styles.secondaryLabel}>Создать аккаунт</Text>
         </Pressable>
       </View>
-    </View>
+    </KeyboardAwareScrollView>
   );
 }
 
-const styles = StyleSheet.create((theme, rt) => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    paddingTop: rt.insets.top,
-    paddingHorizontal: theme.spacing.three,
-  },
+const styles = StyleSheet.create(theme => ({
   card: {
     width: '100%',
     maxWidth: 420,

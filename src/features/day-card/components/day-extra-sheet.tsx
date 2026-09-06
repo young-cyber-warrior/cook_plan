@@ -2,14 +2,15 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-nativ
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BottomSheet } from '@/components/bottom-sheet';
+import { ProductFields } from '@/components/product-fields';
 import {
   useDayExtraDraft,
   type EstimateStatus,
 } from '@/features/day-card/hooks/use-day-extra-draft';
 import type { DayExtra, Macros } from '@/features/day-card/types';
-import { UnitToggle } from '@/features/recipes/components/unit-toggle';
+import { toNumber } from '@/lib/number';
 import type { DayExtraInput } from '@/stores/personal-store';
-// а разве не льзя импрот из карточки дня там же такой же блок зачем все это дублировать ?
+
 const MACRO_FIELDS: { key: keyof Macros; label: string }[] = [
   { key: 'calories', label: 'ккал' },
   { key: 'protein', label: 'Б' },
@@ -21,8 +22,6 @@ const STATUS_HINTS: Partial<Record<EstimateStatus, string>> = {
   unrecognized: 'Не понял продукт — впиши КБЖУ сам или уточни название.',
   failed: 'Не удалось посчитать — впиши КБЖУ сам.',
 };
-
-const toNumber = (text: string) => Number(text.replace(/[^\d]/g, '')) || 0;
 
 interface DayExtraSheetProps {
   visible: boolean;
@@ -52,26 +51,14 @@ export function DayExtraSheet({ visible, extra, onClose, onSubmit }: DayExtraShe
       visible={visible}
       onClose={onClose}
       header={<Text style={styles.heading}>{extra ? 'Мой продукт' : 'Добавить продукт'}</Text>}>
-      <View style={styles.inputRow}>
-        <TextInput
-          style={styles.nameInput}
-          value={draft.name}
-          onChangeText={draft.setName}
-          placeholder="Название"
-          placeholderTextColor={theme.colors.textMuted}
-          selectionColor={theme.colors.accent}
-        />
-
-        <TextInput
-          style={styles.amountInput}
-          value={String(draft.amount)}
-          onChangeText={text => draft.setAmount(toNumber(text))}
-          keyboardType="number-pad"
-          selectionColor={theme.colors.accent}
-        />
-
-        <UnitToggle value={draft.unit} onChange={draft.setUnit} />
-      </View>
+      <ProductFields
+        name={draft.name}
+        amount={draft.amount}
+        unit={draft.unit}
+        onNameChange={draft.setName}
+        onAmountChange={draft.setAmount}
+        onUnitChange={draft.setUnit}
+      />
 
       <Pressable
         style={({ pressed }) => styles.estimate(pressed, !draft.canSave)}
@@ -118,31 +105,6 @@ const styles = StyleSheet.create(theme => ({
     fontFamily: theme.fonts.sans,
     color: theme.colors.text,
     marginBottom: theme.spacing.two,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.two,
-    marginBottom: theme.spacing.three,
-  },
-  nameInput: {
-    ...theme.typography.body,
-    fontFamily: theme.fonts.sans,
-    color: theme.colors.text,
-    flex: 1,
-    padding: 0,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.accent,
-  },
-  amountInput: {
-    ...theme.typography.body,
-    fontFamily: theme.fonts.sans,
-    color: theme.colors.text,
-    width: 48,
-    padding: 0,
-    textAlign: 'right',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.accent,
   },
   estimate: (pressed: boolean, disabled: boolean) => ({
     alignItems: 'center',

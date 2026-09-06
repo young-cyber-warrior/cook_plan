@@ -7,6 +7,9 @@ export interface Category {
 
 export type IngredientUnit = 'g' | 'ml';
 
+/** «шт» has no place in a recipe or a macro lookup — only a shopping list counts pieces. */
+export type Unit = IngredientUnit | 'pcs';
+
 export interface Ingredient {
   id: string;
   name: string;

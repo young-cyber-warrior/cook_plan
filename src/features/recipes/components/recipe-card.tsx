@@ -6,6 +6,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { MacroBadge } from '@/features/day-card/components/macro-badge';
 import { CategoryToggle } from '@/features/recipes/components/category-toggle';
 import { RecipeDetails } from '@/features/recipes/components/recipe-details';
+import { RecipePhotoCollage } from '@/features/recipes/components/recipe-photo-collage';
 import { SelectToggleButton } from '@/features/recipes/components/select-toggle-button';
 import { useAccordion } from '@/features/recipes/hooks/use-accordion';
 import { useRecipeEditor } from '@/features/recipes/hooks/use-recipe-editor';
@@ -78,14 +79,18 @@ export const RecipeCard = observer(function RecipeCard({
   ) : (
     <View style={styles.header}>
       <View style={styles.info}>
-        <Text style={styles.category}>{categoryLabel(categories, recipe.category)}</Text>
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={styles.category} numberOfLines={1}>
+          {categoryLabel(categories, recipe.category)}
+        </Text>
+        <Text style={styles.title} numberOfLines={2}>
           {recipe.title}
         </Text>
         <View style={styles.badges}>
           <MacroBadge value={String(recipe.macros.calories)} unit="ккал" />
         </View>
       </View>
+
+      <RecipePhotoCollage recipeId={recipe.id} />
 
       {selectable ? (
         <SelectToggleButton selected={selected} onToggle={() => pick.toggle(recipe.id)} />

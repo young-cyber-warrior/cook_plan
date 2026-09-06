@@ -10,7 +10,7 @@ import type {
 } from '@/features/day-card/types';
 import type { GroceryItem } from '@/features/grocery/types';
 import { toMacrosStatus } from '@/features/recipes/lib/macros-status';
-import { toIngredientUnit } from '@/features/recipes/lib/units';
+import { toGroceryUnit, toIngredientUnit } from '@/features/recipes/lib/units';
 import type { Category, Ingredient, Recipe } from '@/features/recipes/types';
 import type {
   CategoryRow,
@@ -59,9 +59,13 @@ export function groupIngredientsByRecipe(rows: RecipeIngredientRow[]): Map<strin
 
 export const recipeServings = (row: RecipeRow) => Math.max(1, row.servings ?? 1);
 
-export const toRecipe = (row: RecipeRow, ingredients: Ingredient[]): Recipe => ({
+export const toRecipe = (
+  row: RecipeRow,
+  ingredients: Ingredient[],
+  canonicalCategoryIds: Map<string, string>,
+): Recipe => ({
   id: row.id,
-  category: row.category_id ?? '',
+  category: canonicalCategoryIds.get(row.category_id ?? '') ?? row.category_id ?? '',
   title: row.title ?? '',
   description: row.description ?? '',
   servings: recipeServings(row),
@@ -76,22 +80,39 @@ export const toRecipe = (row: RecipeRow, ingredients: Ingredient[]): Recipe => (
   ingredients,
 });
 
+const categorySlug = (row: CategoryRow) => row.slug ?? row.id;
+
 export function toCategories(rows: CategoryRow[], ownerId: string | null): Category[] {
-  const categories: Category[] = [];
+  const bySlug = new Map<string, Category>();
 
   for (const row of rows) {
-    if (row.owner_id !== ownerId) continue;
-    categories.push({ id: row.id, label: row.label ?? '' });
+    const slug = categorySlug(row);
+    if (bySlug.has(slug) && row.owner_id !== ownerId) continue;
+    bySlug.set(slug, { id: row.id, label: row.label ?? '' });
   }
 
-  return categories;
+  return [...bySlug.values()];
+}
+
+export function canonicalCategoryIds(
+  rows: CategoryRow[],
+  categories: Category[],
+): Map<string, string> {
+  const slugByRowId = new Map(rows.map(row => [row.id, categorySlug(row)]));
+  const canonicalBySlug = new Map(
+    categories.map(category => [slugByRowId.get(category.id) ?? category.id, category.id]),
+  );
+
+  return new Map(
+    rows.map(row => [row.id, canonicalBySlug.get(categorySlug(row)) ?? row.id]),
+  );
 }
 
 export const toGroceryItem = (row: GroceryItemRow): GroceryItem => ({
   key: row.id,
   name: row.name ?? '',
   amount: row.amount ?? 0,
-  unit: toIngredientUnit(row.unit),
+  unit: toGroceryUnit(row.unit),
   checked: !!row.checked,
   edited: !!row.edited,
 });

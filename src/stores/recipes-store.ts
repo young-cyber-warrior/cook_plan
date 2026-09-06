@@ -30,6 +30,7 @@ import type { CategoryRow, RecipeIngredientRow, RecipeRow } from '@/sync/schema'
 import { buildUpdate, diffById, nowIso } from '@/sync/write';
 
 import {
+  canonicalCategoryIds,
   groupIngredientsByRecipe,
   isFilledIngredient,
   recipeServings,
@@ -144,6 +145,10 @@ export class RecipesStore {
     return new Map(this.categoryRows.map(row => [row.id, row.slug ?? '']));
   }
 
+  get canonicalCategoryIds(): Map<string, string> {
+    return canonicalCategoryIds(this.categoryRows, this.categories);
+  }
+
   get recipeRowById(): Map<string, RecipeRow> {
     return new Map(this.recipeRows.map(row => [row.id, row]));
   }
@@ -154,7 +159,10 @@ export class RecipesStore {
 
   get recipes(): Recipe[] {
     const ingredientsByRecipe = this.ingredientsByRecipeId;
-    return this.recipeRows.map(row => toRecipe(row, ingredientsByRecipe.get(row.id) ?? []));
+    const canonical = this.canonicalCategoryIds;
+    return this.recipeRows.map(row =>
+      toRecipe(row, ingredientsByRecipe.get(row.id) ?? [], canonical),
+    );
   }
 
   get dayCardRecipeById(): Map<string, DayCardRecipe> {
@@ -189,17 +197,18 @@ export class RecipesStore {
     return { id, label: trimmed };
   }
 
-  addRecipe(draft: Recipe) {
+  addRecipe(draft: Recipe, photos: PhotoSource[] = []) {
     haptics.created();
     const ownerId = this.root.auth.userId;
     const recipeId = randomUUID();
     const now = nowIso();
     const ingredients = draft.ingredients.filter(isFilledIngredient);
+    const attached = photos.slice(0, MAX_RECIPE_PHOTOS);
 
     this.root.write(
       'recipes.addRecipe',
-      () =>
-        powersync.writeTransaction(async tx => {
+      async () => {
+        await powersync.writeTransaction(async tx => {
           await tx.execute(
             'insert into recipes (id, owner_id, category_id, title, description, servings, calories, protein, fat, carbs, macros_status, deleted, created_at) values (?, ?, ?, ?, ?, ?, 0, 0, 0, 0, ?, 0, ?)',
             [
@@ -219,15 +228,25 @@ export class RecipesStore {
               [randomUUID(), ownerId, recipeId, ingredient.name.trim(), ingredient.amount, ingredient.unit, index, now],
             );
           }
-        }),
-      { recipeId, ingredients: ingredients.length },
+        });
+
+        /** Photos go after the recipe row so the upload queue never sends a dangling `recipe_id`. */
+        for (const [index, source] of attached.entries()) {
+          await this.savePhoto(recipeId, source, index);
+        }
+      },
+      { recipeId, ingredients: ingredients.length, photos: attached.length },
     );
   }
 
   saveRecipe(next: Recipe) {
     const row = this.recipeRowById.get(next.id);
     if (!row) return;
-    const current = toRecipe(row, this.ingredientsByRecipeId.get(next.id) ?? []);
+    const current = toRecipe(
+      row,
+      this.ingredientsByRecipeId.get(next.id) ?? [],
+      this.canonicalCategoryIds,
+    );
     const ownerId = this.root.auth.userId;
     const now = nowIso();
     const nextIngredients = next.ingredients.filter(isFilledIngredient);
@@ -288,47 +307,49 @@ export class RecipesStore {
     );
   }
 
-  addPhoto(recipeId: string, source: PhotoSource) {
+  private async savePhoto(recipeId: string, source: PhotoSource, position: number) {
     const queue = this.root.attachments;
     if (!queue) return;
-    if (this.photoCountOf(recipeId) >= MAX_RECIPE_PHOTOS) return;
 
     const ownerId = this.root.auth.userId;
     const id = randomUUID();
-    const position = this.photoCountOf(recipeId);
     const now = nowIso();
+    const photo = await preparePhoto(source);
 
-    this.root.write(
-      'recipes.addPhoto',
-      async () => {
-        const photo = await preparePhoto(source);
-        await queue.saveFile({
-          id,
-          data: photo.data,
-          fileExtension: PHOTO_EXTENSION,
-          mediaType: PHOTO_MEDIA_TYPE,
-          metaData: photo.hash,
-          updateHook: async tx => {
-            await tx.execute(
-              'insert into recipe_photos (id, owner_id, recipe_id, storage_path, content_hash, width, height, bytes, position, deleted, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)',
-              [
-                id,
-                ownerId,
-                recipeId,
-                photoStoragePath(photo.hash),
-                photo.hash,
-                photo.width,
-                photo.height,
-                photo.bytes,
-                position,
-                now,
-              ],
-            );
-          },
-        });
+    await queue.saveFile({
+      id,
+      data: photo.data,
+      fileExtension: PHOTO_EXTENSION,
+      mediaType: PHOTO_MEDIA_TYPE,
+      metaData: photo.hash,
+      updateHook: async tx => {
+        await tx.execute(
+          'insert into recipe_photos (id, owner_id, recipe_id, storage_path, content_hash, width, height, bytes, position, deleted, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)',
+          [
+            id,
+            ownerId,
+            recipeId,
+            photoStoragePath(photo.hash),
+            photo.hash,
+            photo.width,
+            photo.height,
+            photo.bytes,
+            position,
+            now,
+          ],
+        );
       },
-      { id, recipeId },
-    );
+    });
+  }
+
+  addPhoto(recipeId: string, source: PhotoSource) {
+    const position = this.photoCountOf(recipeId);
+    if (position >= MAX_RECIPE_PHOTOS) return;
+
+    this.root.write('recipes.addPhoto', () => this.savePhoto(recipeId, source, position), {
+      recipeId,
+      position,
+    });
   }
 
   removePhoto(id: string) {

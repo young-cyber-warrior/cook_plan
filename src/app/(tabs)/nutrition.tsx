@@ -1,9 +1,11 @@
 import { observer } from 'mobx-react-lite';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { Pressable, SectionList, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { AddGroceryItemSheet } from '@/features/grocery/components/add-grocery-item-sheet';
 import { GroceryItemCard } from '@/features/grocery/components/grocery-item-card';
 import { WeekPickSheet } from '@/features/grocery/components/week-pick-sheet';
+import type { GroceryItem } from '@/features/grocery/types';
 import { useGroceryStore } from '@/stores/store-context';
 
 const formatRecipeCount = (count: number) => {
@@ -14,9 +16,24 @@ const formatRecipeCount = (count: number) => {
 };
 
 export default observer(function NutritionScreen() {
-  const { list, openSheet, toggleItem, setItemAmount, removeItem } = useGroceryStore();
+  const {
+    list,
+    recipeItems,
+    customItems,
+    openSheet,
+    openCustomSheet,
+    toggleItem,
+    setItemAmount,
+    removeItem,
+  } = useGroceryStore();
 
-  if (!list) {
+  const addOwnButton = (
+    <Pressable style={({ pressed }) => styles.secondaryCta(pressed)} onPress={openCustomSheet}>
+      <Text style={styles.secondaryCtaLabel}>Добавить свой продукт</Text>
+    </Pressable>
+  );
+
+  if (recipeItems.length === 0 && customItems.length === 0) {
     return (
       <View style={styles.container}>
         <View style={styles.empty}>
@@ -24,30 +41,57 @@ export default observer(function NutritionScreen() {
           <Pressable style={({ pressed }) => styles.cta(pressed)} onPress={openSheet}>
             <Text style={styles.ctaLabel}>Получить список продуктов</Text>
           </Pressable>
+          {addOwnButton}
         </View>
 
         <WeekPickSheet />
+        <AddGroceryItemSheet />
       </View>
     );
   }
 
+  const sections: { title: string; meta: string; data: GroceryItem[] }[] = [];
+
+  if (recipeItems.length > 0) {
+    sections.push({
+      title: 'Из рецептов',
+      meta: list ? formatRecipeCount(list.recipeCount) : '',
+      data: recipeItems,
+    });
+  }
+
+  if (customItems.length > 0) {
+    sections.push({ title: 'Свои продукты', meta: '', data: customItems });
+  }
+
+  const total = recipeItems.length + customItems.length;
+  const checked = [...recipeItems, ...customItems].filter(item => item.checked).length;
+
   return (
     <View style={styles.container}>
-      <FlatList
-        data={list.items}
+      <SectionList
+        sections={sections}
         keyExtractor={item => item.key}
         contentContainerStyle={styles.listContent}
+        stickySectionHeadersEnabled={false}
         ListHeaderComponent={
           <View style={styles.summary}>
             <Text style={styles.summaryText}>
-              {list.items.length} продуктов · куплено{' '}
-              {list.items.filter(item => item.checked).length}
+              {total} продуктов · куплено {checked}
             </Text>
-            <View style={styles.chip}>
-              <Text style={styles.chipLabel}>из {formatRecipeCount(list.recipeCount)}</Text>
-            </View>
           </View>
         }
+        renderSectionHeader={({ section }) => (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+            {section.meta ? (
+              <View style={styles.chip}>
+                <Text style={styles.chipLabel}>из {section.meta}</Text>
+              </View>
+            ) : null}
+          </View>
+        )}
+        ListFooterComponent={<View style={styles.footer}>{addOwnButton}</View>}
         renderItem={({ item }) => (
           <GroceryItemCard
             item={item}
@@ -59,6 +103,7 @@ export default observer(function NutritionScreen() {
       />
 
       <WeekPickSheet />
+      <AddGroceryItemSheet />
     </View>
   );
 });
@@ -83,6 +128,21 @@ const styles = StyleSheet.create(theme => ({
     ...theme.typography.label,
     fontFamily: theme.fonts.sans,
     color: theme.colors.textSecondary,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: theme.spacing.two,
+    paddingBottom: theme.spacing.one,
+    paddingHorizontal: theme.spacing.one,
+    backgroundColor: theme.colors.background,
+  },
+  sectionTitle: {
+    ...theme.typography.caption,
+    fontFamily: theme.fonts.sans,
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
   },
   chip: {
     paddingVertical: theme.spacing.half,
@@ -120,5 +180,23 @@ const styles = StyleSheet.create(theme => ({
     fontFamily: theme.fonts.sans,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  footer: {
+    paddingTop: theme.spacing.three,
+  },
+  secondaryCta: (pressed: boolean) => ({
+    alignItems: 'center',
+    paddingVertical: theme.spacing.three,
+    paddingHorizontal: theme.spacing.four,
+    borderRadius: theme.radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.accent,
+    backgroundColor: pressed ? theme.colors.backgroundSelected : 'transparent',
+  }),
+  secondaryCtaLabel: {
+    ...theme.typography.body,
+    fontFamily: theme.fonts.sans,
+    fontWeight: '600',
+    color: theme.colors.accent,
   },
 }));

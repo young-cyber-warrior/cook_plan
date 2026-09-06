@@ -76,8 +76,7 @@ export function RecipeDetails({ recipe, editor, onDelete }: RecipeDetailsProps) 
 
       <View style={styles.actionsRow}>
         <RecipeActions editing={editing} onDelete={onDelete} onEditToggle={toggleEdit} />
-        {/* да сделай через &&  */}
-        {editing ? null : (
+        {!editing && (
           <Pressable onPress={() => store.shareRecipe(recipe.id)}>
             <Text style={styles.shareLabel}>Поделиться</Text>
           </Pressable>

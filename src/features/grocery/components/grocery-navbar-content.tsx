@@ -24,7 +24,7 @@ const GroceryActions = observer(function GroceryActions() {
   };
 
   const confirmClear = () =>
-    Alert.alert('Очистить список?', 'Все продукты и отметки будут удалены.', [
+    Alert.alert('Очистить список?', 'Продукты из рецептов и отметки будут удалены. Свои останутся.', [
       { text: 'Отмена', style: 'cancel' },
       { text: 'Очистить', style: 'destructive', onPress: clear },
     ]);

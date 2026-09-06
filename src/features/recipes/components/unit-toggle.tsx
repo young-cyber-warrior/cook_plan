@@ -2,26 +2,28 @@ import { Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { INGREDIENT_UNITS, unitLabel } from '@/features/recipes/lib/units';
-import type { IngredientUnit } from '@/features/recipes/types';
+import type { Unit } from '@/features/recipes/types';
 
-const OPTIONS = INGREDIENT_UNITS.map(unit => ({ unit, label: unitLabel(unit) }));
-
-interface UnitToggleProps {
-  value: IngredientUnit;
-  onChange: (unit: IngredientUnit) => void;
+interface UnitToggleProps<T extends Unit> {
+  value: T;
+  /** Which units this screen offers; «шт» is only for the grocery list. */
+  units?: readonly T[];
+  onChange: (unit: T) => void;
 }
 
-/** г/мл segmented picker for an ingredient's amount. */
-export function UnitToggle({ value, onChange }: UnitToggleProps) {
+/** Segmented picker for an amount's unit. */
+export function UnitToggle<T extends Unit>({ value, units, onChange }: UnitToggleProps<T>) {
+  const options = units ?? (INGREDIENT_UNITS as readonly Unit[] as readonly T[]);
+
   return (
     <View style={styles.root}>
-      {OPTIONS.map(option => (
+      {options.map(unit => (
         <Pressable
-          key={option.unit}
-          style={styles.option(option.unit === value)}
+          key={unit}
+          style={styles.option(unit === value)}
           hitSlop={4}
-          onPress={() => onChange(option.unit)}>
-          <Text style={styles.label(option.unit === value)}>{option.label}</Text>
+          onPress={() => onChange(unit)}>
+          <Text style={styles.label(unit === value)}>{unitLabel(unit)}</Text>
         </Pressable>
       ))}
     </View>

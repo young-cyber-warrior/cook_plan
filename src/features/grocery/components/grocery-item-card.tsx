@@ -3,10 +3,11 @@ import { Pressable, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { unitLabel } from '@/features/recipes/lib/units';
+import type { Unit } from '@/features/recipes/types';
 
 import type { GroceryItem } from '../types';
 
-const AMOUNT_STEP = 10;
+const amountStep = (unit: Unit) => (unit === 'pcs' ? 1 : 10);
 
 interface GroceryItemCardProps {
   item: GroceryItem;
@@ -25,12 +26,14 @@ interface CardFooterProps {
 
 function CardFooter({ item, editing, onEditingChange, onRemove, onAmountChange }: CardFooterProps) {
   if (editing) {
+    const step = amountStep(item.unit);
+
     return (
       <View style={styles.editRow}>
         <Pressable
           style={({ pressed }) => styles.stepButton(pressed)}
-          disabled={item.amount <= AMOUNT_STEP}
-          onPress={() => onAmountChange(Math.max(AMOUNT_STEP, item.amount - AMOUNT_STEP))}>
+          disabled={item.amount <= step}
+          onPress={() => onAmountChange(Math.max(step, item.amount - step))}>
           <Text style={styles.stepLabel}>−</Text>
         </Pressable>
         <Text style={styles.editAmount}>
@@ -38,7 +41,7 @@ function CardFooter({ item, editing, onEditingChange, onRemove, onAmountChange }
         </Text>
         <Pressable
           style={({ pressed }) => styles.stepButton(pressed)}
-          onPress={() => onAmountChange(item.amount + AMOUNT_STEP)}>
+          onPress={() => onAmountChange(item.amount + step)}>
           <Text style={styles.stepLabel}>+</Text>
         </Pressable>
         <Pressable style={styles.footerButton} hitSlop={4} onPress={() => onEditingChange(false)}>

@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 
 import { clampServings } from '@/features/day-card/lib/servings';
 import { emptyIngredient } from '@/features/recipes/lib/ingredient';
+import { MAX_RECIPE_PHOTOS, type PhotoSource } from '@/features/recipes/lib/photo-pipeline';
 import type { Ingredient, Macros, Recipe, RecipeCategory } from '@/features/recipes/types';
 
 const emptyMacros: Macros = { calories: 0, protein: 0, fat: 0, carbs: 0 };
@@ -25,10 +26,23 @@ const isFilledIngredient = (ingredient: Ingredient) =>
 /** Owns a fresh recipe draft for the add-recipe sheet — same field shape as useRecipeEditor, no accordion state. */
 export function useRecipeDraft(defaultCategory: RecipeCategory) {
   const [draft, setDraft] = useState(() => emptyDraft(defaultCategory));
+  /** The recipe row does not exist yet, so photos wait here until it is written. */
+  const [photos, setPhotos] = useState<PhotoSource[]>([]);
 
   const reset = useCallback(() => {
     setDraft(emptyDraft(defaultCategory));
+    setPhotos([]);
   }, [defaultCategory]);
+
+  const addPhoto = useCallback((source: PhotoSource) => {
+    setPhotos(current =>
+      current.length >= MAX_RECIPE_PHOTOS ? current : [...current, source],
+    );
+  }, []);
+
+  const removePhoto = useCallback((uri: string) => {
+    setPhotos(current => current.filter(photo => photo.uri !== uri));
+  }, []);
 
   const updateTitle = useCallback((title: string) => {
     setDraft(current => ({ ...current, title }));
@@ -83,9 +97,12 @@ export function useRecipeDraft(defaultCategory: RecipeCategory) {
 
   return {
     draft,
+    photos,
     isValid,
     reset,
     commit,
+    addPhoto,
+    removePhoto,
     updateTitle,
     updateCategory,
     updateDescription,
